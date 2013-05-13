@@ -1,0 +1,17 @@
+require std
+$hello = function(){
+        return "hello"..", ".."world!";
+}
+$obj = {
+        text = "hello, ";
+        method: function(who){
+                print @text..who..'\n'.."total length:";
+                return #@text+#who;
+        }
+}
+$variadic = function(num,arg,args...){
+        print "Argument#"..num..":"..arg;
+        if(#args==0)
+                return;
+        $variadic(num+1,...args);
+}

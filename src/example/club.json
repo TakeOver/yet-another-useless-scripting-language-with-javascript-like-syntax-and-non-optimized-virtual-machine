@@ -1,0 +1,13 @@
+{"info":{"money":"","stadium":{"pay":null,"name":""},"coach":{"skills":[],"name":""},"owner":"","name":"Chelsea"},"players":[
+{"pos":"G","skills":[12,13,14,15],"name":"G","sal":null},
+{"pos":"D","skills":[12,11,9,14],"name":"D1","sal":null},
+{"pos":"D","skills":[12,11,9,14],"name":"D2","sal":null},
+{"pos":"D","skills":[12,11,9,14],"name":"D3","sal":null},
+{"pos":"M","skills":[12,12,12,12],"name":"M1","sal":null},
+{"pos":"M","skills":[12,11,9,14],"name":"M2","sal":null},
+{"pos":"M","skills":[12,11,9,14],"name":"M3","sal":null},
+{"pos":"M","skills":[12,11,9,14],"name":"M4","sal":null},
+{"pos":"F","skills":[12,13,14,15],"name":"F1","sal":null},
+{"pos":"F","skills":[12,11,9,14],"name":"F2","sal":null},
+{"pos":"F","skills":[12,11,9,14],"name":"F3","sal":null}
+]}

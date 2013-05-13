@@ -1,0 +1,325 @@
+require std;
+class Vector2 {
+        var x;
+        var y;
+        construct(x,y){
+                @x=x;
+                @y=y;
+        }
+        function __print (){
+                print "[x:"..@x..",y:"..@y.."]"
+        }
+        function Scalar(vec){
+                return Math.sqrt(@x*vec.x + @y*vec.y);
+        }
+        function Add(vec){
+                @x+=vec.x;
+                @y+=vec.y;
+                return this;
+        }
+        function __add(x,y){
+                return new Vector2(x.x,x.y).Add(y);
+        }
+}
+class Vector3 extends Vector2 {
+        var z;
+        construct (x,y,z){
+                @super(x,y)
+                @z=z;
+        }
+        function __print(){
+                print "[x:"..@x..",y:"..@y..",z:"..@z.."]"
+        }
+        function __add(x,y){
+                return new Vector3(x.x+y.x,x.y+y.y,x.z+y.z);
+        }
+}
+class Matrix {
+        var array = []
+        var dim = 0;
+        var col = 0;
+        construct(a,b){
+                if(a==null)
+                        return;
+                if(typeof(a)=="array"){
+                        @array=a;
+                        @dim = #a[0];
+                        @col = #a;
+                        return;
+                }
+                else {
+                        var tmp = []
+                        for(var i=0;i<a;++i)
+                                tmp[i]=0;
+                        for(var i=0;i<b;++i)
+                                @array[i] = tmp.Clone();
+                        @dim = b;
+                        @col = a;
+                }
+        }
+        function __print(){
+                print "["
+                for(var i=0;i<#@array;++i)
+                        print @array[i];
+                print "]"
+        }
+        function Apply(mat,func){
+                print @array
+                print mat.array
+                for(var i in @array){
+                        for(var j=0;j<#i.value;++j)
+                                i.value[j]= func(i.value[j],mat.array[i.key][j]);
+                }
+        }
+        function Aggregate(func){
+                for(var i in @array)
+                        for(var j=0;j<#i.value;++j)
+                                i.value[j]=func(i.value[j])
+        }
+        function Add(mat){
+                @Apply(mat,|x,y|x+y);
+        }
+        function Sub(mat){
+                @Apply(mat,|x,y|x-y)
+        }
+        function __add(x,y){
+                return new Matrix(x.array).Add(y);
+        }
+        function __sub(x,y){
+                return new Matrix(x.array).Sub(y);
+        }
+}
+class Point  extends Vector2 {
+        construct(x,y){
+                @super(x,y);
+                delete @Scalar;
+                delete @Add;
+        }
+        function Vectorize(other){
+                return new Vector2(other.x-@x,other.y-@y);
+        }
+        function Aggregate(func){
+                var tmp = func(@x,@y);
+                @x=tmp[0]
+                @y=tmp[1];
+        }
+        function Move(dx,dy){
+                @x+=dx;
+                @y+=dy;
+        }
+        function SetPosition(x,y){
+                @x=x;
+                @y=y;
+        }
+}
+class Entity {
+        var life;
+        var position;
+        var direction;
+        var Type;
+        var alive;
+        var power;
+        var LifeLimit = 1000000;
+        construct(life,power,x,y,dx,dy,type,alive){
+                @position = new Point(x||0,y||0);
+                @direction = new Vector2(dx||0,dy||0);
+                @life = life || 0;
+                @type=type;
+                @alive = alive ;
+                @power = power || 0;
+        }
+        function Move(dx,dy){
+                @position.Move(dx,dy);
+        }
+        function SetDirection(x,y){
+                @direction = new Vector2(x,y);
+        }
+        function ChangeDirection(dx,dy){
+                @direction.Add(new Vector2(dx,dy));
+        }
+        function setDead(){
+                @alive = false;
+        }
+        function setAlive(x){
+                @alive = x;
+        }
+        function setLive(){
+                @alive = true;
+        }
+        function Heal(x,lim,aggregate){
+                lim=lim||@LifeLimit;
+                if(typeof(aggregate)!="function")
+                        aggregate=|x|x;
+                @life+= aggregate(x)%lim;
+        }
+        function OnDeath(){
+                //abstract;
+                std.log(std.log.Warning,"Abstract entity triggered @OnDeath!");
+                @finallize();
+        }
+        function Damage(who,x,aggregate){
+                if(typeof(aggregate)!="function")
+                        aggregate=|x|x;
+                @life -= aggregate(x);
+                if(who.type=="Player")
+                        print "Player:"..who.name.." attacked monster and dealed "..aggregate(x).." damage! Monster HP:"..@life;
+                else
+                        print "Monster dealed to Player:"..@name.." "..aggregate(x).." damage, Player HP:"..@life;
+                if(@life<=0){
+                        @life = 0;
+                        @alive= false;
+                        @OnDeath();
+                }else
+                        @OnAttack(who);
+        }
+        function __print(){
+                var game = @Game;
+                delete @Game;
+                var prnt = @__print;
+                std.io.write(this);
+                print "";
+                @Game =game;
+        }
+}
+class Monster extends Entity {
+        const LifeLimit = 100;
+        var Game;
+        var inventary;
+        function OnDeath(){
+                @DropAll();
+                @Game.OnMonsterDeath(this);
+                @finallize();
+        }
+        construct(Factory,x,y,dx,dy){
+                @super(@LifeLimit,std.rand(5,11),x,y,dx,dy,"Monster",true);
+                @inventary = ["Ruby","Diamond"];
+                @Game = Factory;
+        }
+        function DropAll(){
+                @Game.OnDrop(@inventary);
+                @inventary.finallize();
+        }
+        function OnAttack(player){
+                @Game.OnPlayerAttack(player);
+                if(std.rand(2)==0)
+                        player.Damage(this,std.rand(4,@power)*std.rand(1,3));
+        }
+}
+class Player extends Entity{
+        const LifeLimit = 50;
+        var Game;
+        var name;
+        var inventary;
+        construct(Factory,name,x,y,dx,dy){
+                @super(@LifeLimit,std.rand(11,16),x,y,dx,dy,"Player",true);
+                @inventary = ["Sword","Armor"]
+                @Game = Factory;
+                @name=name
+        }
+        function OnDeath(){
+                @DropAll();
+                @Game.OnPlayerDeath(this);
+                @finallize();
+        }
+        function DropAll(){
+                @Game.OnDrop(@inventary)
+                @inventary.finallize();
+        }
+        function OnAttack(monster){
+                @Game.OnMonsterAttack(monster);
+                if(std.rand(2)==0){
+                        monster.Damage(this,std.rand(10,@power));
+                }
+        }
+        function Attack(whom){
+                whom.Damage(this,std.rand(10,@power));
+        }
+}
+class Game {
+        var entities;
+        var dropped;
+        construct(){
+                @entities = []
+                @dropped = []
+        }
+        function OnDrop(arr){
+                for(var i in arr){
+                        print "Dropped:"..i.value;
+                        @dropped[#@dropped]=i.value;
+                }
+        }
+        function OnPlayerAttack(player){
+                print "Player:"..player.name.." attacked monster, players HP:["..player.life.."]";
+        }
+        function OnMonsterAttack(monster){
+                print "Monster attacked player, monster HP:["..monster.life.."]"
+        }
+        function OnPlayerDeath(player){
+                print "Player "..player.name.." is dead..."
+        }
+        function OnMonsterDeath(monster){
+                print "Monster defeated!";
+        }
+        function create(whom){
+                if(whom == "Monster"){
+                        var _ = new Monster(this,0,0,0,0);
+                        @entities.push(_);
+                        return _;
+                }
+                var _ = new Player(this,whom,0,0,0,0)
+                @entities.push(_);
+                return _;
+        }
+        var winner;
+        function Play(){
+                var monstersstack = [], playersstack = []
+                for(var i in @entities){
+                        if(i.value.alive==false)
+                                continue;
+                        if(i.value.type=="Monster"){
+                                monstersstack[#monstersstack]=i.value;
+                        }else{
+                                playersstack[#playersstack]=i.value;
+                        }
+                }
+                var total = std.rand(#monstersstack + #playersstack)
+                while(#playersstack>0 && #monstersstack >0 && total!=0){
+                        playersstack[#playersstack-1].Attack(monstersstack[#monstersstack-1]);
+                        if(!playersstack[#playersstack-1].alive)
+                                delete playersstack[#playersstack-1];
+                        if(!monstersstack[#monstersstack-1].alive)
+                                delete monstersstack[#monstersstack-1];
+                        --total;
+                }
+                if(#monstersstack>0 && #playersstack==0)
+                        @winner = "Monsters!";
+                else if(#monstersstack==0 && #playersstack == 0)
+                        @winner = @winner || "Draw"
+                else if(#monstersstack==0 && #playersstack!=0)
+                        @winner = "Players!";
+                return (#playersstack!=0)&&(#monstersstack!=0)
+        }
+        function Result(){
+                print "Winner:"..@winner;
+                print "Total drop:"
+                print @dropped
+        }
+        function __print(){
+                print "Game trace:"
+                print "entities:"
+                for(var i in @entities){
+                        print i.value;
+                }
+                print "drop:"
+                print @dropped;
+        }
+}
+$game = new Game();
+var randomname = ["John","Gish","Venerar","Kolya","Vasya"]
+const lim = Userdata.EntityLim
+for(var i=0;i<lim;++i){
+        if(std.rand(0,3)!=0)
+                $game.create("Monster")
+        else
+                $game.create(randomname[std.rand(#randomname)]);
+}

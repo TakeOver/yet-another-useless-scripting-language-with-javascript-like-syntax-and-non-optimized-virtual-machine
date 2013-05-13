@@ -1,0 +1,658 @@
+
+const std = {}
+const __typeof = System.__native__typeof;
+
+operator typeof 150(x){
+        return __typeof(x);
+}
+alias toString = __tostr
+const Number = System.Number;
+const String = System.String;
+const Boolean = System.Boolean;
+const Function = System.Function;
+const Null = System.Null;
+const Object = System.Object;
+const Array = System.Array;
+String.Empty = "";
+String.replaceAt = function(where,what){
+  if(where<0 || where>=#this || typeof(where)!="number")
+    throw "Incorrect string operation:replaceAt with:"..where.." and:"..what
+  var first = this.substr(0,where) ||"";
+  var second = this.substr(where+1,#this-where-1) || "";
+  return first..what..second;
+}
+Object.__call = function(){
+        if(#arguments==1){
+                if(typeof(arguments[0])=="object"){
+                        for(var i in arguments)
+                                this[i.key]=i.value;
+                        return;
+                }
+                this[0]=arguments[0];
+                return;
+        }
+        for (var i = #arguments - 1 - arguments%2; i >= 0; i=i-2) {
+                this[arguments[i-1]]=this[arguments[i]];
+        }
+}
+Array.__call = function(){
+        var ars = #arguments;
+        if(ars==0)
+                return;
+        if(ars==1){
+                if(typeof(arguments[0])=="number" || arguments[0]>=0){
+                        this[arguments[0]-1]=null; //making array size;
+                        return;
+                }
+                raise "Incorrect array length"..arguments[0] if(typeof(arguments[0])=="number")
+                this[0]=arguments[0]
+                return;
+        }
+        for (var i = arguments.length - 1; i >= 0; --i) {
+                this[i]=arguments[i];
+        };
+}
+Boolean.__call=|x|x||false
+Number.__call=|x|x||0
+Null.__call=||null
+String.__call=|x|x||String.Empty
+Function.__call=function(x){
+        if(x==null)
+                return function(){}
+        @__call = x
+        return this;
+}
+Number.times = function(x){
+  for(var i=0;i<this;++i)
+    x(i);
+}
+String.substr = System.__native__substr;
+String.charAt = |a| this.substr(a,1);
+
+Number.to_str = || ""..this;
+Array.to_str=  || this..'';
+Object.to_str = ||this..'';
+Boolean.to_str=||this..'';
+Null.to_str =||"null";
+Function.to_str=||"function";
+String.to_str =|| this;
+
+const JSON ={
+  parse :|str| System.__native__safe__json__parse(str);
+
+  valid: function (str){
+    if(typeof(str)=="string")
+      return (typeof(this.parse(str))=="object");
+    if(typeof(str)=="object")
+      return true;
+    return false;
+  }
+  to_str:function(obj){
+        if( typeof obj.Seriallize == "function")
+                return obj.Seriallize();
+        return obj.to_str();
+  }
+}
+
+String.to_obj = |a| JSON.parse(this);
+String.valid_json =|a|JSON.valid(this);
+
+std.eval = |str| System.__native__unsafe__evaluate("("..str..")");
+
+const __iter = |self|{
+    __self :  self,
+    __current: 0,
+    key:"",
+    value:{},
+    __call: function(){
+      if(this.__current>=#this.__self)
+	return null;
+      if(typeof(this.__self)=="object"){
+	var next = System.__native__next(this.__self,this.__current);
+	if(next == null)
+	  return null;
+	++this.__current;
+	this.value = this.__self[next];
+	this.key = next;
+	if(this.key == "prototype")
+	  return this();
+      }else if(typeof(this.__self) == "array"){
+	this.value = this.__self[this.__current];
+	this.key = this.__current;
+	++this.__current;
+      }else return null;
+
+      return this;
+    }
+  }();
+
+const InputStream = function(path,disp){
+  this.__path = path;
+  this.init = System.__init__safe__istream;
+  this.init();
+  delete this.init;
+  this.__line = -1;
+  this.__auto_dispose = disp || true;
+  this.getLine = || this.__buf[++this.__line];
+  this.get= function(){
+    var res = "";
+    var size =  #this.__buf
+    for(var i=0;i<size;++i){
+      res=res..' '..this.__buf[i];
+    }
+    if(this.__auto_dispose)
+        this.finallize()
+    return res;
+  }
+  this.__len = #this.__buf;
+  this.eof = || this.__len <=this.__line+1;
+
+}
+const OutStream = System.__native__write__to__file;
+
+std.io = {
+  read: System.__native__read__stdin,
+  write: System.__native__write__stdout
+}
+
+
+const vec_fn = function(times, func) {
+  var res = []
+  for(var i=0;i<times;++i)
+    res[i]=func(i);
+  return res;
+}
+
+const Math = {
+  PI:3.1415926535,
+  E:2.7182818284,
+  sin:System.__native__sin,
+  sqrt:System.__native__sqrt,
+  round:System.__native__round,
+  pow: System.__native__pow,
+  ln: System.__native__log,
+  asin: System.__native__asin,
+  cos: function(x){
+        var __s = @sin(x);
+        return @sqrt(1- __s*__s);
+  }
+  tg: |x| @sin(x)/@cos(x)
+  ctg: |x| 1/@tg(x)
+  acos: |x| @asin(@sqrt(1-x*x));
+  log: |x,y| @ln(y)/@ln(x)
+};
+Array.push = function(x){ this[this.length()]=x;}
+//\brief alert works like print -> output 'wat' and puts newline character
+const alert = function(wat){
+  print wat;
+}
+
+Array.each = function(aggregate){
+  for(var i in this)
+    this[i.key]=aggregate(i.value);
+}
+Object.each = function(aggregate,cond){
+  cond = cond || ||true
+  for(var i in this){
+    if(cond(i.key))
+      this[i.key]=aggregate(i.value);
+  }
+}
+
+const GC={
+    ptr_count: System.__native__reflection_heap_size,
+    Collect: System.__native__reflection_gc_collect
+}
+define assert = (function(x,y){if(std.debug && !x){print "assertion failed, line:"..__LINE__.." file:"..__FILE__.."\n"..y}})
+
+std.log = {
+  Fatal:-1,
+  Warning: 1,
+  Ignore: 0,
+  Error: 2,
+  Normal:3,
+  __call: function(type,msg, donotraise){
+    donotraise = donotraise || false
+    if(type == @Ignore)
+      return;
+    if(type == @Warning)
+      print "std.log.Warning:"
+    else if(type == @Error){
+      print "std.log.Error:"
+    }else if(type == @Fatal)
+      print "std.log.Fatal:"
+    print msg
+    if(type == @Normal || type == @Warning)
+      return;
+    raise "Error" if(!donotraise && type == @Error)
+    raise "Fatal" if(!donotraise && type == @Fatal)
+  }
+}
+std.rand = function(from, to){
+  if(typeof(from)=="number" && to==null){
+    to = from
+    from = 0
+  }
+  from = from || 0
+  to = to || 32600
+  raise "Incorrect rand() args, to lesser then from" if(from>to)
+  if(from == to)
+    return from
+  return System.__native__rand()%(to-from) + from
+}
+
+Object.finallize = function(){
+  for(var i in this){
+    delete @[i.key]
+  }
+}
+Array.length = Object.length = String.length = ||#this;
+Array.finallize = Object.finallize
+const echo = function(){
+        var size = #arguments;
+        var __write = std.io.write
+        for (var i = 0; i < size; ++i) {
+                __write(arguments[i])
+        }
+}
+const Userdata = System.Userdata
+Array.insert = function(arr...){
+        for (var i = 0; i < arr.length; ++i) {
+                @push(arr[i])
+        }
+}
+Object.insert = function(obj){
+        if(typeof(obj)!="object")
+                return;
+        for(var i in obj)
+                @[i.key]=i.value;
+}
+Object.inherit = function(base){
+        for(var i in base)
+                @[i.key]=i.value;
+        @prototype = base.prototype;
+}
+
+Array.Clone = function(){
+        var res = []
+        for(var i in this)
+                res[i.key]=i.value;
+        return res;
+}
+define $ = Userdata.
+alias and = &&
+alias or = ||
+const _ = null; // since compiler don't report assign to contant as error(simply ignoring assign), this would be nice
+alias not = !
+alias nil = null
+alias sys = System
+const __instanceof = function(x,y){
+        if(x._F == y)
+                return true;
+        while(x.__proto__ != null  && x.__proto__!=y)
+                x = x.prototype;
+        return x.__proto__ == y;
+}
+operator instanceof 150 (x,y){
+        return __instanceof(x,y);
+}
+alias is = instanceof // C# like.
+operator ^ 70 (x,y){
+        return !x || !y;
+}
+function for_each(x,y){
+        for(var i in x)
+                y(i.value);
+}
+operator each 150 (x,y){
+        for_each(x,y);
+}
+operator as 150(x,y){
+        if(x instanceof y ==false)
+                return null;
+        var res = new y();
+        for(var i in x.prototype){
+                res[i.key]= x[i.key] || i.value;
+        }
+        res.__proto__ = x.prototype.__proto__;
+        res._F = y;
+        if(x.prototype.super!=null)
+                res.super = x.prototype.super;
+        res.construct = x.prototype.construct;
+        return res;
+}
+
+class Exception extends Object {
+        var _what;
+        var line ;
+        var callee;
+        var additionalinfo;
+        construct(what,line,callee,additionalinfo){
+                @_what=what;
+                @line = line;
+                @callee = callee;
+                @additionalinfo=additionalinfo;
+        }
+        function what(){
+                var str = @_what;
+                if(line!=null)
+                        str=str.."\nat line:"..@line;
+                if(callee!=null)
+                        str=str.."\ncallee:"..@callee;
+                if(additionalinfo!=null)
+                        str=str.."\nadditional:"..@additionalinfo;
+                return str;
+        }
+        function log(){
+                std.log(std.log.Warning,@what());
+        }
+        function __tostr(){
+                return @what();
+        }
+}
+operator typeid 150(x){
+        if(typeof x == "object")
+                return x._F || Object;
+        if(typeof x == "number")
+                return Number;
+        if typeof x == "string"
+                return String;
+        if typeof x == "boolean"
+                return Boolean;
+        if typeof x == "array"
+                return Array;
+        return null;
+}
+const NaN = -Math.sqrt(-1);
+const Infinity = 1/0;// !
+
+operator '<=>' 70(x,y){
+        if(x>y)
+                return 1;
+        if(x==y)
+                return 0;
+        if(x<y)
+                return -1;
+}
+operator '=~' 20 (x,y){
+        return typeid x == typeid y
+}
+operator objectof 150 (x){
+        if(typeof x == "object")
+                return x;
+        return null;
+}
+operator numberof 150 (x){
+        if(typeid x == Number)
+                return x;
+        return null;
+}
+operator booleanof 150 (x){
+        if(typeid x == Boolean)
+                return x;
+        return x || false;
+}
+operator stringof 150 (x){
+        if typeid x == String
+                return x;
+        return x.to_str()
+}
+operator isNaN 150 (x){
+        return x==NaN;
+}
+operator isInf 150 (x){
+        return x == Infinity
+}
+class Ref extends Object{
+        var mutable;
+        construct(ref, mutable){
+                @mutable = mutable || true;
+                @["::__ref"] = ref;
+        }
+        function set(ref){
+                if(@mutable)
+                        @construct(ref,true);
+                else
+                        throw new Exception("Access violation. Immutable ref.",__LINE__,"Ref.set(ref)");
+        }
+        function get(){
+                return @["::__ref"];
+        }
+        function type(){
+                return typeof(@["::__ref"]);
+        }
+        function id(){
+                return typeid @["::__ref"];
+        }
+        function is_obj(){
+                return @["::__ref"] is Object;
+        }
+        function lock(){
+                @mutable = false;
+        }
+        function unlock(){
+                @mutable = true;
+        }
+        function setmut(mut){
+                @mutable = mut;
+        }
+        function unset(){
+                if(@mutable){
+                        delete @["::__ref"];
+                }else
+                        throw new Exception("Access violation. Immutable ref.",__LINE__,"Ref.unset()");
+        }
+        function __print(){
+                print @["::__ref"];
+        }
+        function __str(){
+                return @["::__ref"].to_str();
+        }
+        function is_mutable(){
+                return @mutable;
+        }
+        function __add(x,y){
+                return new Ref(x["::__ref"] + (y["::__ref"] || y));
+        }
+        function __sub(x,y){
+                return new Ref(x["::__ref"] - (y["::__ref"] || y));
+        }
+        function __mul(x,y){
+                return new Ref(x["::__ref"] * (y["::__ref"] || y));
+        }
+        function __div(x,y){
+                return new Ref(x["::__ref"] / (y["::__ref"] || y));
+        }
+        function __mod(x,y){
+                return new Ref(x["::__ref"] % (y["::__ref"] || y));
+        }
+        function __less(x,y){
+                return new Ref(x["::__ref"] < (y["::__ref"] || y));
+        }
+        function __equal(x,y){
+                return new Ref(x["::__ref"] == (y["::__ref"] || y));
+        }
+        function __nonequal(x,y){
+                return new Ref(x["::__ref"] != (y["::__ref"] || y));
+        }
+        function __great(x,y){
+                return new Ref(x["::__ref"] > (y["::__ref"] || y));
+        }
+        function __great_eq(x,y){
+                return new Ref(x["::__ref"] >= (y["::__ref"] || y));
+        }
+        function __less_eq(x,y){
+                return new Ref(x["::__ref"] <= (y["::__ref"] || y));
+        }
+        function __not(x){
+                return new Ref(!x["::__ref"]);
+        }
+        function __neg(x){
+                return new Ref(-x["::__ref"]);
+        }
+        function __inc(x){
+                if(!@mutable)
+                        throw new Exception("Increment of locked ref.",__LINE__,"Ref.__inc(x)");
+                ++this["::__ref"];
+                return this;
+        }
+        function __dec(x){
+                if(!@mutable)
+                        throw new Exception("Decrement of locked ref.",__LINE__,"Ref.__dec(x)");
+                --this["::__ref"];
+                return this;
+        }
+        function __assign(x){
+                if !@mutable
+                        throw new Exception("assign to locked ref.",__LINE__)
+                if x is Ref {
+                        @set(x);
+                }else{
+                        @["::__ref"] = x;
+                }
+        }
+}
+operator isNull 150 (x){
+        return x == null;
+}
+function abstract_cmp(_cond,a,b,c ... ){
+        if( b == null && #c == 0){
+                return a;
+        }
+        if(c.length()==0){
+                if(_cond(a,b))
+                        return a;
+                return b;
+        }
+        if(_cond(a,b))
+                return abstract_cmp(_cond,a,...c);
+        return abstract_cmp(_cond,b,...c);
+}
+function max(args...){
+        return abstract_cmp(|x,y|x>y, ...args);
+}
+function min(args...){
+        return abstract_cmp(|x,y|x<y,...args);
+}
+Array.binary_search = function (x, cmp){
+        cmp = cmp || |x,y| x<y;
+        var first = 0,last = #this;
+        while(first<last){
+                var mid = (first+last)/2;
+                mid = Math.round(mid-0.5)
+                if(this[mid]==x)
+                        return mid;
+                if(cmp(this[mid],x)){
+                        first = mid+1;
+                }else{
+                        last = mid;
+                }
+        }
+        return -1;
+}
+Array.bubble_sort = function(cmp){
+        cmp = cmp || |x,y| x>y;
+        for(var i =0;i<#this-1;++i){
+                for(var j=i+1;j<#this;++j){
+                        if(cmp(this[i],this[j])){
+                                var tmp = this[i];
+                                this[i]=this[j];
+                                this[j]=tmp;
+                        }
+                }
+        }
+        return this;
+}
+class NotImplementedException extends Exception {
+        construct(a,args...){
+                @super("NotImplementedException:"..a,...args);
+        }
+}
+Array.qsort = function (cmp){
+        throw new NotImplementedException("Array.qsort");
+}
+Array.heapsort = function(cmp){
+        throw new NotImplementedException("Array.heapsort");
+}
+Array.stablesort = Array.heapsort;
+Array.sort = Array.bubble_sort;
+Array.uniq = function(){
+        var hash = {}
+        var res = []
+        for(var i in this){
+                if(hash[i.value])
+                        continue;
+                hash[i.value]=true;
+                res.push(i.value);
+        }
+        hash.finallize();
+        return res;
+}
+
+class _String extends String {
+        var str;
+        construct(x){
+                @str = x;
+        }
+        function __add(x,y){
+                return new _String(x..y);
+        }
+        function __tostr(){
+                return @str;
+        }
+        function __assign(val){
+                if typeof val == "string"
+                        @str= val;
+                else if val is _String
+                        @str = val.str;
+                else @str = String.Empty;
+                return this;
+        }
+}
+class UserException extends Exception{
+        var isUserdata = true;
+        construct(a,args...){
+                @super("UserException:"..a,...args);
+        }
+        function again(){
+                delete @isUserdata;
+                throw this;
+        }
+}
+class Immutable {
+        var _superized = false;
+        construct(){
+                if(!@_superized){
+                        @_superized = true;
+                        return;
+                }
+                delete @_superized;
+                @__assign = function(){
+                        throw new Exception("Access violation, assigning value to property of immutable interface",__LINE__);
+                }
+                @__del = function(){
+                        throw new Exception("Access violation, delete property of immutable interface",__LINE__);
+                }
+                @__set = function(){
+                        throw new Exception("Access violation, setting value to property of immutable interface",__LINE__);
+                }
+        }
+}
+Array.exist = function(cond){
+        if(typeof cond != "function")
+                cond = |x| cond == x;
+        for(var i in this)
+                if(cond(i.value))
+                        return true;
+}
+Array.flat = function(){
+        var f = function(x,xs...){
+                if(typeof x == "array")
+                        return _F(...xs,...x);
+                if(xs.exist(|x|typeof x == "array")){
+                        return _F(...xs,x);
+                }
+                return arguments;
+        }
+        return f(...this).sort();
+}

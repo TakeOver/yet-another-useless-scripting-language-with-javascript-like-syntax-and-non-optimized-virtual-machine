@@ -1,0 +1,28 @@
+//from http://en.wikipedia.org/wiki/Duck_typing source example of JS wich also perfectly works in nls
+require std
+var Duck = function(){
+    this.quack = function(){alert('Quaaaaaack!');};
+    this.feathers = function(){alert('The duck has white and gray feathers.');};
+    return this;
+};
+
+var Person = function(){
+    this.quack = function(){alert('The person imitates a duck.');};
+    this.feathers = function(){alert('The person takes a feather from the ground and shows it.');};
+    this.name = function(){alert('John Smith');};
+    return this;
+};
+
+var in_the_forest = function(duck){
+    duck.quack();
+    duck.feathers();
+};
+
+var game = function(){
+    var donald = new Duck();
+    var john = new Person();
+    in_the_forest(donald);
+    in_the_forest(john);
+};
+
+game();

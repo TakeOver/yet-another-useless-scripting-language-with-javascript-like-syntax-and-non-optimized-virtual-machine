@@ -1,0 +1,85 @@
+require std  // require "std.nls" also possible!require std;
+var qinfo = (new InputStream("json1.json")).get().to_obj();
+print "indexing: "..(qinfo["series"]==qinfo.series)
+var series = qinfo.series
+for(var i in qinfo){
+  print "current size:"..#qinfo
+  print i.key.." -- > "..i.value;
+  delete qinfo[i.key]
+  continue
+  print "this code will never be executed"
+}
+var size = #series
+for(var i in series){
+  print i.key.." == > "..i.value
+  print "size:"..#series
+  if(#series>=size-2)
+    delete series[size - i.key]
+    else if(#series*2<=size){
+      delete series[size - i.key]
+    }else
+      break;
+}
+delete qinfo
+delete series
+var io = std.io;
+var eval = std.eval;
+
+function Player (){
+  @name="player";
+  @salary=0;
+  @skills=[0,0,0,0];
+  @position="F";
+}
+function Club(){
+  this.players = vec_fn(11,|i| new Player());
+  this.info = {
+    name:"HellFlame",
+    owner:"Venerar",
+    coach:{
+      name:"JohnOne",
+      skills:[23,54,12,32]
+    },
+    stadium:{
+      name:"Terras",
+      cost:535,
+      payments:75655,
+      capacity:23,
+      popularity:21
+    },
+    money:9000
+  }
+}
+var club = new Club();
+
+
+OutStream("json.json",club);
+print "Ok!\n";
+
+club.info.owner = io.read()
+club.info.coach.name = io.read()
+club.info.coach.skills = eval('['..io.read()..']')
+
+io.write(club);
+for(var i in club.players)
+  delete club.players[i.key];
+print club;
+delete club.players;
+delete club.info;
+print club; // output: {}
+var a = 11;
+{
+  var a = 10;
+  var b = 12;
+  print "\na=="..a..'\n'; // 10
+  print "b == "..b..'\n'; // 12
+}
+print "\na=="..a..'\n'; // 11
+//print "b == "..b..'\n'; // variable undefined. compile error
+delete a;
+delete club;
+print club;
+var q,w=q+1,e+q*w
+print q
+print w
+print e

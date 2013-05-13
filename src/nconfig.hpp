@@ -1,0 +1,5 @@
+#define NDEBUG
+#define PROTOTYPES 1
+#define GC_CYCLO 1000
+#define OBJECT_INHERIT 1
+#define EXPERIMENTAL_GC_ROOT

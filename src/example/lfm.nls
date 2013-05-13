@@ -1,0 +1,139 @@
+require std
+extern club1,club2
+club1 = club1 || "Chelsea"
+club2 = club2 || "Manchester"
+function Club(clubname){
+	var src = clubname..".json",club;
+	try{
+		club = new InputStream(src).get().to_obj()
+		raise " Cannot read club" if(club==null)
+
+	}catch(e){
+		std.log(std.log.Fatal,"Cannot load club:"..clubname..", file:"..src.." doesn't exist");
+	}
+	if(this== null)
+		return club;
+	for(var i in club)
+		@[i.key]=i.value;
+}
+function Goal(club,who,when){
+	@who = who
+	@when = when
+	@club = club.info.name
+	@log = function(){
+		print "Goal at:"..@when.." by:"..@who.." [club:"..@club.."]"
+	}
+}
+function Config(path){
+	var ist;
+	path = path..".json"
+	try{
+		ist = new InputStream(path)
+	}catch(e){
+		std.log(std.log.Warnig,"ConfingFile("..path..") doesn't exist")
+	}
+	var conf=ist.get().to_obj()
+	if(typeof(conf)!="object"){
+		std.log(std.log.Warnig,"Cannot parse configuration. Set up standart")
+		conf = {coef = 1.15}
+	}
+	return conf;
+}
+function Generator(club1,club2,conf){
+	@cl = [club1,club2]
+	@time = 0
+	@conf = Config(conf||"lfm")
+	@res = {
+		goals:[],
+		count:[0,0]
+	}
+	for(var j=0;j<2;++j)
+		for(var i =0;i<11;++i)
+			for(var k in ["F","M","D"])
+				if(@cl[j].players[i].pos==k.value && !@[k.value..j])
+					@[k.value..j]=i
+	@current = 0
+	@swap = function(){
+		@current = 1- @current;
+	}
+	@onGoal = function(player){
+		std.assert(typeof(player) =="number" && 0<=player && player<11,"player must ne numberic and do not reach 11 and 0")
+		var goal = new Goal(@cl[@current],@cl[@current].players[player].name,@time)
+		@res.goals.push(goal)
+		@res.count[@current]=@res.count[@current]+1
+	}
+	@onAttack = function(){
+		var player = std.rand(@["M"..@current],11);
+		for(var i =0;i<3;++i){
+			@time =@time+3
+			var def = std.rand(@["D"..(1-@current)],@["F"..(1-@current)])
+			var sum1=0,sum2=0
+			for(var j=0;j<4;++j){
+				sum2 = sum2 + @cl[1-@current].players[def].skills[j]
+				sum1 = sum1 + @cl[@current].players[player].skills[j]
+			}
+			if(sum2< std.rand(0,@conf.coef*sum1)){
+				@onGoal(player)
+				break
+			}
+		}
+	}
+	@Play = function(){
+		for(var j =0;j<10;++j){
+			@onAttack()
+			@swap()
+		}
+		return this
+	}
+	@Show = function(){
+		print @res.count
+		for(var i in @res.goals)
+			i.value.log()
+		return this
+	}
+	@Dump =  function(to){
+		raise "Incorrect path arg in SeriallizeResults.out.Dump" if(typeof(to)!="string")
+		OutStream(to..".json",@seriallized);
+		return this;
+	}
+	@SeriallizeResults = function(){
+		@seriallized = {
+			clubs:[@cl[0].info.name,@cl[1].info.name],
+			winner:"",
+			count:@res.count,
+			goals:@res.goals,
+
+		}
+		if(@res.count[0]==@res.count[1])
+			@seriallized.winner = "Draw"
+		else if(@res.count[0]>@res.count[1])
+			@seriallized.winner = @cl[0].info.name;
+		else
+			@seriallized.winner = @cl[1].info.name;
+		return this;
+	}
+}
+Userdata.game = new Generator(new Club(club1),new Club(club2))
+if(Userdata.Embed !=true)
+        Userdata.game.Play()
+                .Show()
+                .SeriallizeResults()
+                .Dump("res")
+                .finallize()
+function Base (x,y){
+        @x=x;
+        @y=y;
+        @add = function(base){
+                @x+=base.x;
+                @y+=base.y;
+        }
+        @__print = function(){
+                echo("[|",@x,",",@y,"|]\n");
+        }
+}
+function Vector(x,y){
+        @prototype = new Base(x,y);
+        @__print = function(){
+                print "{|"..@x..','..@y.."|}";
+        }
+}

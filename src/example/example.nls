@@ -1,0 +1,25 @@
+const meaning_of_life = 42;
+try{
+  try {
+    print "trying..."
+    raise "imma raising this..." if meaning_of_life==42
+  }catch(e){
+    print "catched "..e
+    if( #e>5)
+      throw "tooo big string\n"
+  }
+}catch(e){
+  print "ok "..e
+}finally{
+  print "finally..."
+}
+/* too nasty comment
+ *
+ *
+ *
+ *
+ *
+ */
+ print "hello"
+ //print "never"
+ print "world"
