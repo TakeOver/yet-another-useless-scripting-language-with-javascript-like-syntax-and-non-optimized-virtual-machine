@@ -7,7 +7,16 @@ int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
         api->Require("testf.nls");
-        api->NativeBind("native", defun(test));
+        api->NativeBind("native", test);
+        api->NativeBind("experimental_cos", cosl);
+        api->NativeBind("experimental_sin", sinl);
+        api->NativeBind("experimental_tg", tanl);
+        api->NativeBind("experimental_ctg",(long double (*)(long double))
+                [](long double f)->long double{
+                        return 1.0/tanl(f);
+                }
+        );
+        api->NativeBind("experimental_log", logl);
         api->Execute();
         ScriptFunction<std::string> func = api->getFunction<std::string>("hello");
         std::cout<<func()<<'\n';

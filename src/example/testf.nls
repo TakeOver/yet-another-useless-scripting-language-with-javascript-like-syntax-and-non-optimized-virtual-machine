@@ -20,3 +20,4 @@ print sys.native(1234.12354);
 var s = sys.native(-1234.567);
 print typeof s
 print s
+print sys.experimental_ctg(1)..'=='..Math.ctg(1);
