@@ -276,6 +276,12 @@ namespace nls{
       auto self = S.back();
       S.pop_back();
       --Args.back();
+      #if 1
+        if(func->is_abstract){
+                func->createCall(this, &self);
+                return;
+        }
+      #endif
       native_func_t callee = (native_func_t)func->getNativeCall();
       callee(this,&self);
     }
@@ -302,9 +308,9 @@ namespace nls{
 	  S.pop_back();
 	  clearArgs();
 	  S.push_back(tmp);
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
           __funcs.pop_back();
-          #endif
+#endif
 	  return;
 	}
 	uint off = RD.func->getCall();
@@ -317,9 +323,9 @@ namespace nls{
 	if(prop.type!=Type::fun_t){
 	  clearArgs();
 	  S.push_back(Value());
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
           __funcs.pop_back();
-          #endif
+#endif
 	  return;
 	}
 	S.pop_back();
@@ -331,9 +337,9 @@ namespace nls{
       }
       clearArgs();
       S.push_back(Value());
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
       __funcs.pop_back();
-      #endif
+#endif
     }
     inline void createFunc(){
       RD=Value(gc,new Function(bc[pc].src1));
@@ -695,6 +701,10 @@ namespace nls{
       assert(R[1].type == Type::htable);
       R[1].t->set(name,Value(gc,new Function((void*)addr)));
     }
+    inline void setSysFunction(std::string name,AbstractNativeFunction* addr){
+      assert(R[1].type == Type::htable);
+      R[1].t->set(name,Value(gc,new Function(addr)));
+    }
     VirtualMachine():registers(0){}
     ~VirtualMachine(){
       if(!_is_inited)
@@ -746,6 +756,15 @@ namespace nls{
         }
         S.push_back(self);
         if(func->is_native){
+                if(func->is_abstract){
+                        auto self = S.back();
+                        S.pop_back();
+                        Args.back()--;
+                        func->createCall(this, &self);
+                        self = S.back();
+                        S.pop_back();
+                        return self;
+                }
                 nativeCall(func);
                 auto tmp = S.back();
                 S.pop_back();

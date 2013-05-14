@@ -17,6 +17,7 @@ namespace nls{
     uint16_t rootreg = 0;
     std::vector<std::pair<std::string,std::string> > definitions;
     std::vector<std::pair<std::string,std::string> >aliases;
+    std::vector<AbstractNativeFunction*> native_binds;
   public:
 
     NlsApi(){
@@ -28,6 +29,12 @@ namespace nls{
       delete bb;
       delete vm;
       delete rh;
+      for(auto&x:native_binds)
+        delete x;
+    }
+    template <typename T1,typename T2>void NativeBind(std::string name,NativeFunction<T1, T2> *_F){
+        native_binds.push_back(_F); //locking ptr;
+        vm->setSysFunction(name, _F);
     }
     Value createString(const char*str){
         return Value(getGC(),new String(str));

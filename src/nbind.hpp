@@ -1,115 +1,115 @@
 #pragma once
 #include "nvm.hpp"
 namespace nls{
-        template<typename T> T UserType(Value &res){
+        template<typename T> T UserType(Value res){
                 throw "Not Implemented";
         }
-        template<> void UserType<void>( Value &val){}
-        template<> std::string UserType<std::string>( Value &val){
+        template<> void UserType<void>( Value  val){}
+        template<> std::string UserType<std::string>( Value  val){
                 if(val.type!=Type::str)
                         return std::string();
                 return std::string(val.s->str);
         }
-        template<> long double UserType<long double>(Value&val){
+        template<> long double UserType<long double>(Value val){
                 if(val.type!=Type::number)
                         return 0;
                 return val.f;
         }
-        template<> double UserType<double>(Value&val){
+        template<> double UserType<double>(Value val){
                 if(val.type!=Type::number)
                         return 0;
                 return val.f;
         }
-        template<> float UserType<float>(Value&val){
+        template<> float UserType<float>(Value val){
                 if(val.type!=Type::number)
                         return 0;
                 return val.f;
         }
-        template<> bool UserType<bool>(Value&val){
+        template<> bool UserType<bool>(Value val){
                 return bool(val);
         }
-        template<> uint64_t UserType<uint64_t>(Value&val){
+        template<> uint64_t UserType<uint64_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<uint64_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> uint32_t UserType<uint32_t>(Value&val){
+        template<> uint32_t UserType<uint32_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<uint32_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> uint16_t UserType<uint16_t>(Value&val){
+        template<> uint16_t UserType<uint16_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<uint16_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> uint8_t UserType<uint8_t>(Value&val){
+        template<> uint8_t UserType<uint8_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<uint8_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> int64_t UserType<int64_t>(Value&val){
+        template<> int64_t UserType<int64_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<int64_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> int32_t UserType<int32_t>(Value&val){
+        template<> int32_t UserType<int32_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<int32_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> int16_t UserType<int16_t>(Value&val){
+        template<> int16_t UserType<int16_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<int16_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> int8_t UserType<int8_t>(Value&val){
+        template<> int8_t UserType<int8_t>(Value val){
                 if(val.type==Type::number)
                         return static_cast<int8_t>(val.f);
                 if(val.type==Type::boolean)
                         return val.i;
                 return 0;
         }
-        template<> const char* UserType<const char*>(Value &val){
+        template<> const char* UserType<const char*>(Value  val){
                 if(val.type==Type::str)
                         return val.s->str;
                 return nullptr;
         }
-        template<> Array<Value> * UserType< Array<Value>* >(Value &val){
+        template<> Array<Value> * UserType< Array<Value>* >(Value  val){
                 if(val.type==Type::array)
                         return val.a;
                 return nullptr;
         }
-        template<> Table<Value> * UserType< Table<Value>* >(Value &val){
+        template<> Table<Value> * UserType< Table<Value>* >(Value  val){
                 if(val.type==Type::htable)
                         return val.t;
                 return nullptr;
         }
-        template<> std::map<uint64_t, Value> UserType< std::map<uint64_t, Value> >(Value &val){
+        template<> std::map<uint64_t, Value> UserType< std::map<uint64_t, Value> >(Value  val){
                 if(val.type==Type::array)
                         return val.a->arr;
                 return std::map<uint64_t, Value>();
         }
-        template<> std::unordered_map<std::string, Value> UserType< std::unordered_map<std::string, Value> >(Value &val){
+        template<> std::unordered_map<std::string, Value> UserType< std::unordered_map<std::string, Value> >(Value  val){
                 if(val.type==Type::htable)
                         return val.t->table;
                 return std::unordered_map<std::string, Value>();
         }
-        template<> Function* UserType<Function*>(Value &val){
+        template<> Function* UserType<Function*>(Value  val){
                 if(val.type==Type::fun_t)
                         return val.func;
                 return nullptr;
@@ -197,4 +197,16 @@ namespace nls{
                         return UserType<RETVAL>(res);
                 }
         };
+        template<typename T,typename T1>
+        struct NativeFunction: public AbstractNativeFunction{
+                T (*ptr)(T1);
+                ~NativeFunction<T, T1>(){}
+                NativeFunction<T,T1>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        vm->Push(MarshalType(vm->getGC(),(*ptr)( UserType<T1>(vm->GetArg()))));
+                }
+        };
+        template<typename T1,typename T2> NativeFunction<T1, T2>* defun(T1(*ptr)(T2)){
+                return new NativeFunction<T1, T2>(ptr);
+        }
 }

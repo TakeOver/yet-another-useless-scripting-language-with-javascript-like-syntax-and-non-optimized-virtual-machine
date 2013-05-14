@@ -10,8 +10,13 @@ $obj = {
         }
 }
 $variadic = function(num,arg,args...){
+        print arguments
         print "Argument#"..num..":"..arg;
         if(#args==0)
                 return;
         $variadic(num+1,...args);
 }
+print sys.native(1234.12354);
+var s = sys.native(-1234.567);
+print typeof s
+print s
