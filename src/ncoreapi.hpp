@@ -32,8 +32,8 @@ namespace nls{
       for(auto&x:native_binds)
         delete x;
     }
-    template <typename T1,typename T2>void NativeBind(std::string name,T1(*ptr)(T2)){
-        NativeFunction<T1, T2> *_F = defun(ptr);
+    template <typename T1,typename ...T2>void NativeBind(std::string name,T1(*ptr)(T2...)){
+        NativeFunction<T1, T2...> *_F = defun(ptr);
         native_binds.push_back(_F); //locking ptr;
         vm->setSysFunction(name, _F);
     }

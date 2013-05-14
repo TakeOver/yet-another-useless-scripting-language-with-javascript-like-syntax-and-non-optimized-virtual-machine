@@ -3,11 +3,18 @@ using namespace nls;
 std::string test(long double val){
         return std::to_string(val);
 }
+uint64_t test2(uint32_t i,bool b,const char* c){
+        std::cout<<i<<'\n'
+        <<(b?"true":"false")<<'\n'
+        <<c<<'\n';
+        return 42;
+}
 int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
         api->Require("testf.nls");
         api->NativeBind("native", test);
+        api->NativeBind("test2", test2);
         api->NativeBind("experimental_cos", cosl);
         api->NativeBind("experimental_sin", sinl);
         api->NativeBind("experimental_tg", tanl);

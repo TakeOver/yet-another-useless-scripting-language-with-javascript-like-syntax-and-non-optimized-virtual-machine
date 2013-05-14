@@ -197,16 +197,16 @@ namespace nls{
                         return UserType<RETVAL>(res);
                 }
         };
-        template<typename T,typename T1>
+        template<typename T,typename ...T1>
         struct NativeFunction: public AbstractNativeFunction{
-                T (*ptr)(T1);
-                ~NativeFunction<T, T1>(){}
-                NativeFunction<T,T1>(decltype(ptr) ptr):ptr(ptr){}
+                T (*ptr)(T1...);
+                ~NativeFunction<T, T1...>(){}
+                NativeFunction<T,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
-                        vm->Push(MarshalType(vm->getGC(),(*ptr)( UserType<T1>(vm->GetArg()))));
+                        vm->Push(MarshalType(vm->getGC(),(*ptr)(UserType<T1> (vm->GetArg()) ...)));
                 }
         };
-        template<typename T1,typename T2> NativeFunction<T1, T2>* defun(T1(*ptr)(T2)){
-                return new NativeFunction<T1, T2>(ptr);
+        template<typename T1,typename ...T2> NativeFunction<T1, T2...>* defun(T1(*ptr)(T2...)){
+                return new NativeFunction<T1, T2...>(ptr);
         }
 }
