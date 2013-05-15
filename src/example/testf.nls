@@ -23,3 +23,14 @@ print s
 print sys.experimental_ctg(1)..'=='..Math.ctg(1);
 print sys.test2(123,false,"johOne", std.log);
 print sys.voidf()
+print "****TestClass******"
+print sys.TestClass
+var a = sys.TestClass(1.23);
+print a.a
+print a;
+print "****TestClass******"
+print a.a
+a.a = 1234;
+print a.a
+a.__print();
+print '\n';

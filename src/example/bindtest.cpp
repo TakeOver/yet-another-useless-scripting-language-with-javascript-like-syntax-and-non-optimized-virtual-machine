@@ -14,6 +14,48 @@ uint64_t test2(uint32_t i,bool b,const char* c, Value obj){
 void testvoid(void){
         std::cout<<"Ok!\n";
 }
+class CLASS{
+        long double _a;
+public:
+        CLASS(long double a){
+                _a=a;
+        }
+        CLASS(){_a=0;}
+        long double getA(){
+                std::cerr<<"CLASS::getA\n";
+                return _a;
+        }
+        void setA(long double val){
+                std::cerr<<"CLASS::setA\n";
+                _a = val;
+        }
+        void print(std::ostream & out){
+                out<<"CLASS{a="<<_a<<"}";
+        }
+        CLASS* add(CLASS *cl){
+                return new CLASS(this->_a + cl->_a);
+        }
+};
+void setA(CLASS * cl,long double val){
+        cl->setA(val);
+}
+long double getA(CLASS * cl){
+        return cl->getA();
+}
+void __print(CLASS * cl){
+        cl->print(std::cout);
+}
+namespace nls{
+        template<> CLASS* UserType(Value val){
+                if(val.type!=Type::userdata)
+                        throw ApiError("val.type!=Type::userdata");
+                auto ud = dynamic_cast<Userdata<CLASS>*>(val.u);
+                if(!ud){
+                        throw ApiError(std::string("!ud,typeid(val.u).name()==")+typeid(*val.u).name());
+                }
+                return ud->getData();
+        }
+}
 int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
@@ -29,6 +71,15 @@ int main(int argc, char const *argv[])
                         return 1.0/tanl(f);
                 }
         );
+        api->bindClass<CLASS>(
+                "TestClass",{
+                        {"__set:a",defmem(setA)},
+                        {"__print",defmem(__print)},
+                        {"__get:a",defmem(getA)},
+                        {"construct",defmem((void(*)(CLASS*, long double))
+                                [](CLASS*cl,long double v){
+                                        cl->setA(v);
+                })}});
         api->NativeBind("experimental_log", logl);
         api->Execute();
         ScriptFunction<std::string> func = api->getFunction<std::string>("hello");

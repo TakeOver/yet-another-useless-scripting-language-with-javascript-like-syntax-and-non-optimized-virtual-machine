@@ -5,6 +5,7 @@
 #include "ntable.hpp"
 #include "ngc.hpp"
 #include "nfunction.hpp"
+#include "nuserdata.hpp"
 #include <iostream>
 #include <stdint.h>
 namespace nls{
@@ -18,6 +19,7 @@ namespace nls{
       Function * func;
       uint64_t i;
       long double f;
+      AbstractUserdata * u;
     };
 
     void print(std::ostream&out){
@@ -29,6 +31,7 @@ namespace nls{
 	case Type::number: out<<f; break;
 	case Type::boolean: out<<(i?"true":"false"); break;
 	case Type::null: out<<"null"; break;
+        case Type::userdata: out<< "Userdata"; break;
       }
     }
     Value():type(Type::null),i(0){}
@@ -40,7 +43,10 @@ namespace nls{
     Value(GC *gc,String * s):type(Type::str),s(s){
       gc->push((GCObject*)s);
     }
-    Value Clone(GC*gc){
+    Value(GC *gc,AbstractUserdata* u):type(Type::userdata),u(u){
+      gc->push((GCObject*)u);
+    }
+    Value Clone(GC*gc, VirtualMachine* vm = nullptr){
       if(type==Type::str){
 	return Value(gc,s->Clone());
       }
@@ -65,6 +71,8 @@ namespace nls{
 	        }
        }else if(type==Type::fun_t){
     	   gc->mark(func);
+       }else if(type==Type::userdata){
+                u->MarkAll(gc);
        }
     }
     Value(GC *gc,Table<Value> * t):type(Type::htable),t(t){
@@ -170,6 +178,8 @@ namespace nls{
       return Value(l.f==r.f,Type::boolean);
     if(l.type==Type::boolean && r.type==Type::boolean)
       return Value(l.i==r.i,Type::boolean);
+    if(l.type==Type::userdata && !(l.type-r.type))
+        return Value(l.u==r.u);
     return Value(0,Type::boolean);
   }
   inline const Value operator!=(Value &l,Value &r){

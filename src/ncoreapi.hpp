@@ -37,6 +37,24 @@ namespace nls{
         native_binds.push_back(_F); //locking ptr;
         vm->setSysFunction(name, _F);
     }
+    template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+        std::unordered_map<std::string, Value> mem;
+        for(auto&x:_mem){
+                mem[x.first] = Value(vm->getGC(),new Function(x.second));
+                native_binds.push_back(x.second);
+        }
+        auto constr = [clazz,mem](VirtualMachine*vm,Value*self){
+                self->type = Type::userdata;
+                self->u = new Userdata<C>();
+                self->u->SetMethods(mem);
+                auto init = self->u->get("construct",vm);
+                if(init.type==Type::fun_t){
+                        vm->callWithReplaceArgs(init.func,*self);
+                }
+                vm->Push(*self);
+        };
+        bindFunction(clazz,constr);
+    }
     Value createString(const char*str){
         return Value(getGC(),new String(str));
     }

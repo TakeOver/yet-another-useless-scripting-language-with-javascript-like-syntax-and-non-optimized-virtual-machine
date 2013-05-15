@@ -1,5 +1,6 @@
 #pragma once
 #include "nvm.hpp"
+#include "memory"
 namespace nls{
         template<typename T> T UserType(Value res){
                 throw "Not Implemented";
@@ -220,5 +221,79 @@ namespace nls{
         };
         template<typename T1,typename ...T2> NativeFunction<T1, T2...>* defun(T1(*ptr)(T2...)){
                 return new NativeFunction<T1, T2...>(ptr);
+        }
+        template<class C> class Userdata: public AbstractUserdata{
+                C* clazz;
+                std::unordered_map<std::string,Value> methods;
+        public:
+                virtual ~Userdata<C>(){
+                                delete clazz;
+                }
+                virtual void SetMethods(std::unordered_map<std::string, Value> v){
+                        methods = v;
+                }
+                Userdata<C>(){
+                        clazz = new C();
+                }
+                Userdata<C>(C*clazz):clazz(clazz){}
+                virtual void MarkAll(GC*gc){
+                        for(auto&x:methods)
+                                x.second.markAll (gc);
+                }
+                virtual Value get(std::string what, VirtualMachine*vm){
+                        auto iter = methods.find(what);
+                        if(iter==methods.end()){
+                                iter = methods.find("__get:"+what);
+                                if(iter==methods.end() || iter->second.type!=Type::fun_t){
+                                        return Value();
+                                }
+                                Value self = Value(vm->getGC(),this);
+                                return vm->call(iter->second.func,self);
+                        }
+                        return iter->second;
+                }
+                virtual void set(std::string what, Value whatval,VirtualMachine*vm){
+                        auto iter = methods.find(what);
+                        if(iter==methods.end()){
+                                iter = methods.find("__set:"+what);
+                                if(iter==methods.end() || iter->second.type!=Type::fun_t){
+                                        return;
+                                }
+                                Value self = Value(vm->getGC(),this);
+                                vm->call(iter->second.func,self,{ whatval});
+                                return;
+                        }
+                        iter->second = whatval;
+                }
+                virtual void del(std::string what){
+                        auto iter = methods.find(what);
+                        if(iter==methods.end()){
+                                return;
+                        }
+                        methods.erase(iter);
+                }
+                C * getData(){
+                        return clazz;
+                }
+        };
+        template<class C,typename T,typename ...T1>struct NativeMethod: public AbstractNativeFunction{
+                T (*ptr)(C*,T1...);
+                virtual ~NativeMethod<C,T, T1...>(){}
+                NativeMethod<C,T,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        vm->Push(MarshalType(vm->getGC(),ptr((UserType<C*>(*self)), UserType<T1> (vm->GetArg()) ...)));
+                }
+        };
+        template<class C,typename ...T1>  struct NativeMethod<C,void,T1...>: public AbstractNativeFunction{
+                void (*ptr)(C*,T1...);
+                virtual ~NativeMethod<C,void, T1...>(){}
+                NativeMethod<C,void,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        ptr((UserType<C*>(*self)), UserType<T1> (vm->GetArg()) ...);
+                        vm->Push(Value());
+                }
+        };
+        template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* defmem(T1(*ptr)(C*,T2...)){
+                return new NativeMethod<C,T1, T2...>((ptr));
         }
 }

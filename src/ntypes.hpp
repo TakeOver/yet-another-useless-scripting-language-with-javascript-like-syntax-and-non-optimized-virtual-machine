@@ -3,7 +3,7 @@
 namespace nls{
   namespace Type{
     enum types{
-      null, boolean,number,str,fun_t,htable,array
+      null, boolean,number,str,fun_t,htable,array,userdata
     };
   }
 }

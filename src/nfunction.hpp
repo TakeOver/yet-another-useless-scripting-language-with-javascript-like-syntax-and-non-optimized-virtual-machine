@@ -1,6 +1,7 @@
 #pragma once
 #include "ngcobject.hpp"
 #include <ostream>
+#include <functional>
 namespace nls{
         class VirtualMachine;
         struct Value;
@@ -11,20 +12,18 @@ namespace nls{
   class Function:public GCObject{
   public:
     bool is_native, is_abstract;
-    union{
-    	AbstractNativeFunction* abstract;
-        void*ptr;
-	uint32_t offset;
-    };
-    Function(void*ptr):is_native(true),is_abstract(false),ptr(ptr){}
+    AbstractNativeFunction* abstract;
+    std::function<void(VirtualMachine*,Value*)>  stlfunc;
+    uint32_t offset;
+    Function(std::function<void(VirtualMachine*,Value*)> stlfunc):is_native(true),is_abstract(false),stlfunc(stlfunc){}
     Function(uint32_t offset):is_native(false),is_abstract(false),offset(offset){}
-    Function(AbstractNativeFunction* aptr):is_native(true),is_abstract(true), abstract(aptr){}
+    Function(AbstractNativeFunction* abstract):is_native(true),is_abstract(true), abstract(abstract){}
     ~Function(){}
     void print(std::ostream &out){
       out<<"\"function\"";
     }
     uint32_t getCall(){return offset;}
-    void* getNativeCall(){return ptr;}
+    std::function<void(VirtualMachine*,Value*)> getNativeCall(){return stlfunc;}
     void createCall(VirtualMachine*v,Value*s){
             abstract->call(v, s);
     }

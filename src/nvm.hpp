@@ -17,7 +17,7 @@
 #include "ngc.hpp"
 #include "nvalue.hpp"
 #include "ncodegen.hpp"
-
+#include <functional>
 #ifndef PROTOTYPES
 #define PROTOTYPES 1
 #endif
@@ -32,7 +32,8 @@ namespace nls{
 
   class VirtualMachine{
   public:
-    typedef void(*native_func_t)(VirtualMachine* /* !@p vm*/,Value* /*! @p self*/);
+   // typedef void(*native_func_t)(VirtualMachine* /* !@p vm*/,Value* /*! @p self*/);
+    typedef std::function<void(VirtualMachine*,Value*)> native_func_t;
   private:
     #define RD R[bc[pc].dest]
     #define RS1 R[bc[pc].src1]
@@ -47,6 +48,7 @@ namespace nls{
     pcode* bc = nullptr;
     uint32_t pc = 0;
     std::vector<uint> tryAddr;
+    std::unordered_map<std::string, std::unordered_map<std::string, AbstractNativeFunction*> > userdataclasses;
     uint exitcode = 0;
     bool silent = false;
     uint64_t bcsize;
@@ -111,9 +113,14 @@ namespace nls{
     }
 
     inline void delProp(){
-      if(RD.type!=Type::htable && RD.type!=Type::array)
+      if(RD.type!=Type::htable && RD.type!=Type::array && RD.type!=Type::userdata)
 	return;
       std::stringstream s;
+      if(RD.type==Type::userdata){
+        tostr(RS1,s);
+        RD.u->del(s.str());
+        return;
+      }
       if(RD.type==Type::htable){
 	tostr(RS1,s);
         auto __del = RD.t->get("__del");
@@ -379,6 +386,16 @@ namespace nls{
                         RD = call(object_operator.func,RS1,{RS1});
                 return;
         }
+      }else if(RS1.type==Type::userdata){
+        auto op  = overload_operators[bc[pc].subop];
+        auto object_operator = RS1.u->get(op,this);
+        if(object_operator.type==Type::fun_t){
+                if(!is_unary_op(bc[pc].subop))
+                        RD = call(object_operator.func, RS1, {RS1,RS2});
+                else
+                        RD = call(object_operator.func,RS1,{RS1});
+                return;
+        }
       }
       switch (bc[pc].subop){
 	case add: RD = RS1+RS2; break;
@@ -414,6 +431,10 @@ namespace nls{
       std::stringstream ss;
       tostr(RS1,ss);
       if(RD.type!=Type::htable){
+        if(RD.type==Type::userdata){
+                RD.u->set(ss.str(),RS2,this);
+                return;
+        }
 	#if PROTOTYPES
 	auto prot = _getPrototypeOf(RD.type);
 	if(!prot)
@@ -444,6 +465,10 @@ namespace nls{
       std::stringstream ss;
       tostr(RS2,ss);
       if(RS1.type!=Type::htable){
+        if(RS1.type==Type::userdata){
+                RD = RS1.u->get(ss.str(),this);
+                return;
+        }
 	#if PROTOTYPES
 	auto prot = _getPrototypeOf(RS1.type);
 	if(!prot)
@@ -667,6 +692,7 @@ namespace nls{
       memcpy(bc,&code[0],code.size()*sizeof(code[0]));
       Addr.push_back(bcsize=(code.size()-2));
     }
+  public:
     inline Value call(Function*func,Value&self,std::vector<Value> args = std::vector<Value>()){
         auto __pc = pc;
         auto res = MakeCall(func, self,args);
@@ -676,9 +702,55 @@ namespace nls{
         }
         return res;
     }
-  public:
+    inline Value callWithReplaceArgs(Function*func,Value&self){
+        auto __pc = pc;
+        Value res;
+        #if 1
+        do{
+                Args.back()++;
+                S.push_back(self);
+                if(func->is_native){
+                        if(func->is_abstract){
+                                auto self = S.back();
+                                S.pop_back();
+                                Args.back()--;
+                                func->createCall(this, &self);
+                                self = S.back();
+                                S.pop_back();
+                                res = self;
+                                break;
+                        }
+                        nativeCall(func);
+                        auto tmp = S.back();
+                        S.pop_back();
+                        res = tmp;
+                        break;
+                }
+                Addr.push_back(bcsize);
+                pc = func->getCall()+1;
+                run();
+                res = S.back();
+                S.pop_back();
+                Args.push_back(0);
+        }while(0);
+        #endif
+        if(exitcode==1){
+                exitcode = 0;
+                pc=__pc;
+        }
+        return res;
+    }
     inline GC* getGC(){
       return gc;
+    }
+    inline std::unordered_map<std::string, AbstractNativeFunction*> getUserDataClass(std::string which){
+        auto iter = userdataclasses.find(which);
+        if(iter==userdataclasses.end())
+                return std::unordered_map<std::string, AbstractNativeFunction*>();
+        return iter->second;
+    }
+    inline void registryUserClass(std::string name,std::unordered_map<std::string, AbstractNativeFunction*> & mem){
+        userdataclasses.insert(std::make_pair(name, mem));
     }
     Value getReg(uint reg){
       if(reg>registers)
@@ -699,7 +771,7 @@ namespace nls{
     }
     inline void setSysFunction(std::string name, native_func_t addr){
       assert(R[1].type == Type::htable);
-      R[1].t->set(name,Value(gc,new Function((void*)addr)));
+      R[1].t->set(name,Value(gc,new Function(addr)));
     }
     inline void setSysFunction(std::string name,AbstractNativeFunction* addr){
       assert(R[1].type == Type::htable);
@@ -832,8 +904,24 @@ namespace nls{
 	++pc;
       }
     }
+      void PushArg(Value val){
+        Push(val);
+        Args.back()++;
+      }
+      Value GetResultUnsafe(){
+        auto res = S.back();
+        pop();
+        return res;
+      }
     #undef RD
     #undef RS1
     #undef RS2
   };
+  void PUSHARGS(VirtualMachine*vm,Value val){
+        vm->PushArg(val);
+  }
+  template<typename T> T GETRES(VirtualMachine*){}
+  template<> Value GETRES<Value>(VirtualMachine*vm){
+  return vm->GetResultUnsafe();
+}
 }
