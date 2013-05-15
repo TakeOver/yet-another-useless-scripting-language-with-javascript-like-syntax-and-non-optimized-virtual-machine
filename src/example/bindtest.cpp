@@ -49,14 +49,14 @@ void __print(CLASS * cl){
 }
 namespace nls{
         template<> CLASS* UserType(Value val){
-                if(val.type!=Type::userdata)
-                        throw ApiError("val.type!=Type::userdata");
-                auto ud = dynamic_cast<Userdata<CLASS>*>(val.u);
-                if(!ud){
-                        throw ApiError(std::string("!ud,typeid(val.u).name()==")+typeid(*val.u).name());
-                }
-                return ud->getData();
+        if(val.type!=Type::userdata)
+                throw ApiError("val.type!=Type::userdata");
+        auto ud = dynamic_cast<Userdata<CLASS>*>(val.u);
+        if(!ud){
+                throw ApiError(std::string("!ud,typeid(val.u).name()==")+typeid(*val.u).name());
         }
+        return ud->getData();
+}
 }
 int main(int argc, char const *argv[])
 {
@@ -74,7 +74,7 @@ int main(int argc, char const *argv[])
                         {"construct",defmem((void(*)(CLASS*, long double))
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);
-                })}});
+                                })}});
         api->Execute();
         ScriptFunction<std::string> func = api->getFunction<std::string>("hello");
         std::cout<<func()<<'\n';

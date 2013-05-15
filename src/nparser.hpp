@@ -1240,24 +1240,24 @@ namespace nls{
                 user_unary_oper[kwd]=true;
     }
     void Parse(){
-      root = new BlockExpression(true);
-      lex->getNextTok();
-      ast_t* expr;
-      while(!failed && lex->getLastTokV()!= eof_tok && lex->getLastTokV()!=error_tok){
-	expr = ParseUpExpr();
-	if(!expr || failed){
-	  delete root;
-	  assert(failed);
-          lex->dumpAliasesAndDefs();
-	  throw eval_error(__error_msg);
-	}
-	if(lex->getLastTokV() == error_tok){
-	  delete root;
-          lex->dumpAliasesAndDefs();
-	  throw eval_error(lex->getLastStr());
-	}
-	root = new BlockExpression(root,expr,true);
-      }
+          root = new BlockExpression(true);
+          lex->getNextTok();
+          ast_t* expr;
+          while(!failed && lex->getLastTokV()!= eof_tok && lex->getLastTokV()!=error_tok){
+               expr = ParseUpExpr();
+               if(!expr || failed){
+                     delete root;
+                     assert(failed);
+                     lex->dumpAliasesAndDefs();
+                     throw eval_error(__error_msg);
+             }
+             if(lex->getLastTokV() == error_tok){
+                     delete root;
+                     lex->dumpAliasesAndDefs();
+                     throw eval_error(lex->getLastStr());
+             }
+             root = new BlockExpression(root,expr,true);
+          }
     }
   };
 }

@@ -150,16 +150,16 @@ namespace nls{
         return vm->getUserData();
     }
     inline void CompileText(std::string & code,std::string path="",bool saverootreg = false){
-      Parser * par = new Parser(new Lexer(code,path),path);
-      for(auto&x:definitions)
-        par->define(x.first, x.second);
-      for(auto&x:aliases)
-        par->alias(x.first, x.second);
-      par->Parse();
-      par->getRoot()->emit(bb);
-      if(saverootreg)
-        rootreg =  par->getRoot()->Registry;
-      delete par;
+        Parser * par = new Parser(new Lexer(code,path),path);
+        for(auto&x:definitions)
+                par->define(x.first, x.second);
+        for(auto&x:aliases)
+                par->alias(x.first, x.second);
+        par->Parse();
+        par->getRoot()->emit(bb);
+        if(saverootreg)
+                rootreg =  par->getRoot()->Registry;
+        delete par;
     }
 
     inline void ResetBitCode(){
@@ -278,16 +278,16 @@ namespace nls{
     }
 
     void Require(const char*path){
-      if(strlen(path)<5)
-	throw ApiError("File name non valid. *.nlc - binary file | *nls - sourse file!");
-      if(strcmp(path+strlen(path)-4,".nlc")==0){
-	InitVM(path);
-      }else if(strcmp(path+strlen(path)-4,".nls")==0){
-	CompileFile(std::string(path));
-	PreprocessBitCode();
-	InitVM();
-      }else
-	throw ApiError("File name don't recognized. *.nlc - binary file | *nls - sourse file! ");
+       if(strlen(path)<5)
+               throw ApiError("File name non valid. *.nlc - binary file | *nls - sourse file!");
+       if(strcmp(path+strlen(path)-4,".nlc")==0){
+               InitVM(path);
+       }else if(strcmp(path+strlen(path)-4,".nls")==0){
+               CompileFile(std::string(path));
+               PreprocessBitCode();
+               InitVM();
+       }else
+               throw ApiError("File name don't recognized. *.nlc - binary file | *nls - sourse file! ");
     }
 
     void Execute(){

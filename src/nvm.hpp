@@ -41,7 +41,6 @@ namespace nls{
     Value * R = nullptr; //! @p registers
     uint registers;
     std::vector<Value> S; //! @p Stack-for-spilling-and-func-args
-    uint SP = 0; //! @p Stack-Pointer
     std::vector<uint> Args; //! @p Stack-for-number-of-args
     std::vector<uint> Addr; //! @p Stack-for-ret-addres
     std::vector<uint> Unpacked;
@@ -75,6 +74,12 @@ namespace nls{
                 call(_f.func, val).print(ss);
                 return;
 	}
+      }else if(val.type==Type::userdata){
+        auto _fc = val.u->get("__tostr",this);
+        if(_fc.type==Type::fun_t){
+                call(_fc.func,val).print(ss);
+                return;
+        }
       }
       val.print(ss);
     }
@@ -178,6 +183,12 @@ namespace nls{
                         call(prop.func, RD,{RS1});
                         return;
                 }
+        }else if(RD.type==Type::userdata){
+                auto prop = RD.u->get("__assign",this);
+                if(prop.type==Type::fun_t){
+                        call(prop.func, RD,{RS1});
+                        return;
+                }
         }
       RD=RS1;
       if(RS1.type==Type::str)
@@ -206,22 +217,35 @@ namespace nls{
       }
     }
     inline void length(){
-      if(RS1.type== Type::htable){
-	RD=Value(RS1.t->table.size()+.0);
+      if(RS1.type== Type::htable){        
+                auto _fc = RS1.t->get("__len");
+                if(_fc.type==Type::fun_t){
+                        RD = call(_fc.func,RS1);
+                        return;
+                }                
+	        RD=Value(RS1.t->table.size()+.0);
       }else if (RS1.type==Type::str){
-	RD=Value(RS1.s->len+.0);
+	        RD=Value(RS1.s->len+.0);
       }else if(RS1.type==Type::array){
 	if(RS1.a->arr.size()==0)
-	  RD=Value(0.0);
+	        RD=Value(0.0);
 	else
-	  RD=Value(RS1.a->arr.rbegin()->first+1.0);
-      }else RD=Value(1.0);
+	        RD=Value(RS1.a->arr.rbegin()->first+1.0);
+      }else if(RS1.type==Type::userdata){
+                auto _fc = RS1.u->get("__len",this);
+                if(_fc.type==Type::fun_t){
+                        RD = call(_fc.func,RS1);
+                        return;
+                }                
+      }else{
+                RD=Value(1.0);
+      }
     }
-    __attribute_noinline__ void clearArgs(){
+    inline void clearArgs(){
         if(Args.empty())
                 return;
         if(S.size()!=0){
-                for(uint i=0;i<Args.back();++i){
+                for(uint i=0;i<Args.back() && S.size();++i){
 	               S.pop_back();
                 }
         }
@@ -252,18 +276,12 @@ namespace nls{
     inline void pushArg(){push();}
     inline void print(){
       if(RD.type == Type::htable){
-	auto prop = RD.t->get("__print");
-	if (prop.type==Type::fun_t){
-                call(prop.func,RD);
-	        return;
-	}else{
                 auto str = RD.t->get("__tostr");
                 if(str.type==Type::fun_t){
                         call(str.func,RD).print(std::cout);
                         std::cout<< std::endl;
                         return;
                 }
-        }
       }
       RD.print(std::cout);
       std::cout<<std::endl;
@@ -282,12 +300,10 @@ namespace nls{
       auto self = S.back();
       S.pop_back();
       --Args.back();
-      #if 1
         if(func->is_abstract){
                 func->createCall(this, &self);
                 return;
         }
-      #endif
       native_func_t callee = (native_func_t)func->getNativeCall();
       callee(this,&self);
     }
@@ -336,10 +352,34 @@ namespace nls{
 	}
 	S.pop_back();
 	S.push_back(RD);//pushing new this
+        if(prop.func->is_native){
+                this->nativeCall(prop.func);
+                auto tmp = S.back(); 
+                S.pop_back();
+                clearArgs();
+                S.push_back(tmp);
+                return;
+        }
 	uint offs = prop.func->getCall();
 	Addr.push_back(pc);
 	pc = offs;
 	return;
+      }else if(RD.type==Type::userdata){
+        auto __call = RD.u->get("__call",this);
+        if(__call.type==Type::fun_t){
+                if(__call.func->is_native){
+                        nativeCall(__call.func);
+                        auto tmp = S.back();
+                        S.pop_back();
+                        clearArgs();
+                        S.push_back(tmp);
+                        return;
+                }
+                uint offs = __call.func->getCall();
+                Addr.push_back(pc);
+                pc = offs;
+                return;
+        }
       }
       clearArgs();
       S.push_back(Value());
@@ -544,11 +584,7 @@ namespace nls{
                 return;
         }else{
 	        std::cerr<<"Unhandled exception:\n";
-                Value exc;
-                if(nexception.type==Type::htable && (exc=nexception.t->get("what")).type==Type::fun_t){
-                        call(exc.func, nexception, std::vector<Value>()).print(std::cerr);
-                }else
-                        nexception.print(std::cerr);
+                nexception.print(std::cerr);
                 std::cerr<<"\n";
         }
         exitcode = (uint)-1;
@@ -556,17 +592,16 @@ namespace nls{
 	  std::cerr<<"Instruction address stack trace:\n";
 	for(auto&x:Addr){
 	  std::cerr<<"callee:"<<x;
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
           if(__funcs.empty())
-                #endif
+#endif
                 std::cerr<<"\n";
-
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
           else{
                 std::cerr<<" in "<<__funcs.back()<<'\n';
 	        __funcs.pop_back();
           }
-          #endif
+#endif
         }
 	std::cerr<<"Instruction:"<<pc<<'\n'
 	<<bc[pc].op<<' '<<(uint)bc[pc].subop<<' '<<bc[pc].dest
