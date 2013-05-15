@@ -656,3 +656,6 @@ Array.flat = function(){
         }
         return f(...this).sort();
 }
+$RaiseException = function(msg){
+        throw new UserException(msg);
+}

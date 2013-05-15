@@ -43,17 +43,26 @@ namespace nls{
                 mem[x.first] = Value(vm->getGC(),new Function(x.second));
                 native_binds.push_back(x.second);
         }
-        auto constr = [clazz,mem](VirtualMachine*vm,Value*self){
-                self->type = Type::userdata;
-                self->u = new Userdata<C>();
-                self->u->SetMethods(mem);
-                auto init = self->u->get("construct",vm);
-                if(init.type==Type::fun_t){
-                        vm->callWithReplaceArgs(init.func,*self);
+        auto constr = [clazz,mem,this](VirtualMachine*vm,Value*self){
+                try{
+                        self->type = Type::userdata;
+                        self->u = new Userdata<C>();
+                        self->u->SetMethods(mem);
+                        auto init = self->u->get("construct",vm);
+                        if(init.type==Type::fun_t){
+                                vm->callWithReplaceArgs(init.func,*self);
+                        }
+                }catch(std::string msg){
+                        this->RaiseException(msg);
                 }
                 vm->Push(*self);
         };
         bindFunction(clazz,constr);
+    }
+    void RaiseException(std::string msg){
+        try{
+                getFunction<void>("RaiseException")(msg);
+        }catch(...){}
     }
     Value createString(const char*str){
         return Value(getGC(),new String(str));

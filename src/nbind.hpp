@@ -166,6 +166,13 @@ namespace nls{
         inline Value MarshalType(GC*gc,int8_t val){
                 return Value(static_cast<long double>(val));
         }
+        template <typename T> inline Value MarshalType(GC*gc,std::vector<T> arr){
+                auto array = new Array<Value>();
+                uint64_t idx = 0;
+                for(auto&x:arr)
+                        array->set(idx,MarshalType(gc, x));
+                return Value(gc,array);
+        }
         inline void MarshalVariadic(GC*,std::vector<Value>&){}
         template<typename T,typename ...Args> inline void MarshalVariadic(GC*gc,std::vector<Value>& tmp,T t, Args ... arg){
                 tmp.push_back(MarshalType(gc,t));

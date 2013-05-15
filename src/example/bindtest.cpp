@@ -1,4 +1,5 @@
 #include "../nls.hpp"
+#include "../nregex.hpp"
 using namespace nls;
 std::string test(long double val){
         return std::to_string(val);
@@ -60,6 +61,11 @@ int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
         api->Require("testf.nls");
+        api->bindClass< Regex >("Regex", {
+                {"apply",defmem(Regex::Apply)},
+                {"indexOf",defmem(Regex::IndexOf)},
+                {"exists",defmem(Regex::Exist)},
+                {"construct",defmem(Regex::Create)}});
         api->NativeBind("native", test);
         api->NativeBind("test2", test2);
         api->NativeBind("voidf", testvoid);

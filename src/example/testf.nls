@@ -34,3 +34,5 @@ a.a = 1234;
 print a.a
 a.__print();
 print '\n';
+var reg = sys.Regex("((Java)|(Action))+Script(.*)")
+print reg.exists("JavaScript and ActionScript");
