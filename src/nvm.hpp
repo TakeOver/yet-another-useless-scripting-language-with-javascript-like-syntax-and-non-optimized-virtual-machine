@@ -48,7 +48,6 @@ namespace nls{
     pcode* bc = nullptr;
     uint32_t pc = 0;
     std::vector<uint> tryAddr;
-    std::unordered_map<std::string, std::unordered_map<std::string, AbstractNativeFunction*> > userdataclasses;
     uint exitcode = 0;
     bool silent = false;
     uint64_t bcsize;
@@ -743,15 +742,6 @@ namespace nls{
     inline GC* getGC(){
       return gc;
     }
-    inline std::unordered_map<std::string, AbstractNativeFunction*> getUserDataClass(std::string which){
-        auto iter = userdataclasses.find(which);
-        if(iter==userdataclasses.end())
-                return std::unordered_map<std::string, AbstractNativeFunction*>();
-        return iter->second;
-    }
-    inline void registryUserClass(std::string name,std::unordered_map<std::string, AbstractNativeFunction*> & mem){
-        userdataclasses.insert(std::make_pair(name, mem));
-    }
     Value getReg(uint reg){
       if(reg>registers)
 	throw vm_error("Register non exist");
@@ -904,24 +894,8 @@ namespace nls{
 	++pc;
       }
     }
-      void PushArg(Value val){
-        Push(val);
-        Args.back()++;
-      }
-      Value GetResultUnsafe(){
-        auto res = S.back();
-        pop();
-        return res;
-      }
     #undef RD
     #undef RS1
     #undef RS2
   };
-  void PUSHARGS(VirtualMachine*vm,Value val){
-        vm->PushArg(val);
-  }
-  template<typename T> T GETRES(VirtualMachine*){}
-  template<> Value GETRES<Value>(VirtualMachine*vm){
-  return vm->GetResultUnsafe();
-}
 }

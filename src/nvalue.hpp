@@ -46,7 +46,7 @@ namespace nls{
     Value(GC *gc,AbstractUserdata* u):type(Type::userdata),u(u){
       gc->push((GCObject*)u);
     }
-    Value Clone(GC*gc, VirtualMachine* vm = nullptr){
+    Value Clone(GC*gc){
       if(type==Type::str){
 	return Value(gc,s->Clone());
       }
@@ -54,6 +54,8 @@ namespace nls{
 	return Value(gc,t->Clone(gc));
       if(type==Type::array)
 	return Value(gc,a->Clone(gc));
+      if(type==Type::userdata)
+        return Value(gc,u->Clone(gc));
       return Value(*this);
     }
     void markAll(GC*gc){

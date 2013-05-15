@@ -235,7 +235,7 @@ namespace nls{
                 Userdata<C>(){
                         clazz = new C();
                 }
-                Userdata<C>(C*clazz):clazz(clazz){}
+                Userdata<C>(C*clazz, decltype(methods) &methods):clazz(clazz), methods(methods){}
                 virtual void MarkAll(GC*gc){
                         for(auto&x:methods)
                                 x.second.markAll (gc);
@@ -271,6 +271,11 @@ namespace nls{
                                 return;
                         }
                         methods.erase(iter);
+                }
+                virtual AbstractUserdata* Clone(GC*gc){
+                        auto res = new Userdata<C>(new C(*clazz), methods);
+                        gc->push(res);
+                        return res;
                 }
                 C * getData(){
                         return clazz;
