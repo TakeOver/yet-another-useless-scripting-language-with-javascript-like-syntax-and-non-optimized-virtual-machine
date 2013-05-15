@@ -1,6 +1,4 @@
-#include "../nconfig.hpp"
-#include "../ncoreapi.hpp"
-#include "../nstd.hpp"
+#include "../nls.hpp"
 int main(int argc,char**argv){
   if(argc<2){
     std::cerr<<"Too few files\n";

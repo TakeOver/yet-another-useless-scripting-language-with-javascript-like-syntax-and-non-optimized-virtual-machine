@@ -1,4 +1,6 @@
 #include <cmath>
+#include "nvm.hpp"
+#include "nparser.hpp"
 #pragma once
 #define BINDALL \
 do{ api->bindFunction("__native__substr",str_substr);\

@@ -18,6 +18,7 @@ void testvoid(void){
 class CLASS{
         long double _a;
 public:
+        int b;
         CLASS(long double a){
                 _a=a;
         }
@@ -66,6 +67,7 @@ int main(int argc, char const *argv[])
         api->NativeBind("voidf", testvoid);
         api->bindClass<CLASS>(
                 "TestClass",{
+                        defvarget(CLASS, b),defvarset(CLASS,b),
                         {"__set:a",defmem(setA)},
                         {"__print",defmem(__print)},
                         {"__get:a",defmem(getA)},

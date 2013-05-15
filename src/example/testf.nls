@@ -16,23 +16,5 @@ $variadic = function(num,arg,args...){
                 return;
         $variadic(num+1,...args);
 }
-print sys.native(1234.12354);
-var s = sys.native(-1234.567);
-print typeof s
-print s
-print sys.experimental_ctg(1)..'=='..Math.ctg(1);
-print sys.test2(123,false,"johOne", std.log);
-print sys.voidf()
-print "****TestClass******"
-print sys.TestClass
-var a = sys.TestClass(1.23);
-print a.a
-print a;
-print "****TestClass******"
-print a.a
-a.a = 1234;
-print a.a
-a.__print();
-print '\n';
-var reg = sys.Regex("((Java)|(Action))+Script(.*)")
-print reg.exists("JavaScript and ActionScript");
+var reg = sys.Regex("(.*)(Script)(.*)")
+print reg.apply("JavaScript and ActionScript");

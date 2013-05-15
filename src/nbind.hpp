@@ -308,4 +308,14 @@ namespace nls{
         template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* defmem(T1(*ptr)(C*,T2...)){
                 return new NativeMethod<C,T1, T2...>((ptr));
         }
+        //This two macros generate getter and setter for _PUBLIC_ONLY members of class using lambda
+        #define defvarget(classname,varname) {"__get:"#varname,defmem((decltype(classname::varname)(*)(classname*))\
+        [](classname*ptr)->decltype(classname::varname){\
+                return ptr->varname;\
+        })}
+
+        #define defvarset(classname,varname) {"__set:"#varname,defmem((void(*)(classname*,decltype(classname::varname)))\
+        [](classname*ptr, decltype(classname::varname) val){\
+                ptr->varname = val;\
+        })}
 }
