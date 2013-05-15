@@ -288,12 +288,20 @@ namespace nls{
                         return clazz;
                 }
         };
+        template<class C> C* ThisCast(Value val){
+                if(val.type!=Type::userdata)
+                        throw nls::ApiError("Cannot cast Value to this. val.type!=Type::userdata");
+                auto self = dynamic_cast<Userdata<C>*>(val.u);
+                if(!self)
+                        throw nls::ApiError("Types mismatch. Failed to cast val.u to Userdata<C>*");
+                return self->getData();
+        }
         template<class C,typename T,typename ...T1>struct NativeMethod: public AbstractNativeFunction{
                 T (*ptr)(C*,T1...);
                 virtual ~NativeMethod<C,T, T1...>(){}
                 NativeMethod<C,T,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
-                        vm->Push(MarshalType(vm->getGC(),ptr((UserType<C*>(*self)), UserType<T1> (vm->GetArg()) ...)));
+                        vm->Push(MarshalType(vm->getGC(),ptr((ThisCast<C>(*self)), UserType<T1> (vm->GetArg()) ...)));
                 }
         };
         template<class C,typename ...T1>  struct NativeMethod<C,void,T1...>: public AbstractNativeFunction{
@@ -301,7 +309,7 @@ namespace nls{
                 virtual ~NativeMethod<C,void, T1...>(){}
                 NativeMethod<C,void,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
-                        ptr((UserType<C*>(*self)), UserType<T1> (vm->GetArg()) ...);
+                        ptr((ThisCast<C>(*self)), UserType<T1> (vm->GetArg()) ...);
                         vm->Push(Value());
                 }
         };

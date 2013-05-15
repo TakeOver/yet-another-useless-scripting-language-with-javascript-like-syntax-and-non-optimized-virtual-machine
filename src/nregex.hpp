@@ -45,13 +45,4 @@ namespace nls{
                         *regex = Regex(templ);
                 }
         };
-        template<> Regex* UserType(Value val){
-                if(val.type!=Type::userdata)
-                        throw ApiError("val.type!=Type::userdata");
-                auto ud = dynamic_cast<Userdata<Regex>*>(val.u);
-                if(!ud){
-                        throw ApiError(std::string("!ud,typeid(val.u).name()==")+typeid(*val.u).name());
-                }
-                return ud->getData();
-        }
 }

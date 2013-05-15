@@ -47,17 +47,6 @@ long double getA(CLASS * cl){
 void __print(CLASS * cl){
         cl->print(std::cout);
 }
-namespace nls{
-        template<> CLASS* UserType(Value val){
-        if(val.type!=Type::userdata)
-                throw ApiError("val.type!=Type::userdata");
-        auto ud = dynamic_cast<Userdata<CLASS>*>(val.u);
-        if(!ud){
-                throw ApiError(std::string("!ud,typeid(val.u).name()==")+typeid(*val.u).name());
-        }
-        return ud->getData();
-}
-}
 int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
