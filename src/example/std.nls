@@ -172,13 +172,16 @@ const Math = {
   pow: System.__native__pow,
   ln: System.__native__log,
   asin: System.__native__asin,
-  cos: function(x){
-        var __s = @sin(x);
-        return @sqrt(1- __s*__s);
-  }
-  tg: |x| @sin(x)/@cos(x)
-  ctg: |x| 1/@tg(x)
-  acos: |x| @asin(@sqrt(1-x*x));
+  cos:System.__native__cos,
+  tg: System.__native__tg,
+  ctg: System.__native__ctg,
+  acos: System.__native__acos,
+  lb: System.__native__lb,
+  lg: System.__native__lg,
+  lgamma: System.__native__lgamma,
+  factorial: |x| @round(@lgamma(x)),
+  ceil: System.__native__ceil,
+  atan: System.__native__atan,
   log: |x,y| @ln(y)/@ln(x)
 };
 Array.push = function(x){ this[this.length()]=x;}

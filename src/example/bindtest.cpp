@@ -61,22 +61,9 @@ int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
         api->Require("testf.nls");
-        api->bindClass< Regex >("Regex", {
-                {"apply",defmem(Regex::Apply)},
-                {"indexOf",defmem(Regex::IndexOf)},
-                {"exists",defmem(Regex::Exist)},
-                {"construct",defmem(Regex::Create)}});
         api->NativeBind("native", test);
         api->NativeBind("test2", test2);
         api->NativeBind("voidf", testvoid);
-        api->NativeBind("experimental_cos", cosl);
-        api->NativeBind("experimental_sin", sinl);
-        api->NativeBind("experimental_tg", tanl);
-        api->NativeBind("experimental_ctg",(long double (*)(long double))
-                [](long double f)->long double{
-                        return 1.0/tanl(f);
-                }
-        );
         api->bindClass<CLASS>(
                 "TestClass",{
                         {"__set:a",defmem(setA)},
@@ -86,7 +73,6 @@ int main(int argc, char const *argv[])
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);
                 })}});
-        api->NativeBind("experimental_log", logl);
         api->Execute();
         ScriptFunction<std::string> func = api->getFunction<std::string>("hello");
         std::cout<<func()<<'\n';

@@ -4,7 +4,7 @@
 do{ api->bindFunction("__native__substr",str_substr);\
 api->bindFunction("__native__unsafe__evaluate",__eval);\
 api->bindFunction("__native__safe__json__parse",__json_parse);\
-api->bindFunction("__native__tostr",__tostr);api->bindFunction("__native__next",__iterator_next);\
+api->bindFunction("__native__next",__iterator_next);\
 api->bindFunction("__native__typeof",__native__typeof);\
 api->bindFunction("__init__safe__istream",__init_safe_file_istream);\
 api->bindFunction("__native__write__to__file",__write__to__file);\
@@ -12,92 +12,10 @@ api->bindFunction("__native__write__stdout",__writeline);\
 api->bindFunction("__native__reflection_heap_size",reflection_heap_size);\
 api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect);\
 srand(time(nullptr));\
-api->bindFunction("__native__sqrt",q__sqrt);\
-api->bindFunction("__native__sin",q__sin);\
-api->bindFunction("__native__round",q__round);\
-api->bindFunction("__native__pow",q__pow);\
-api->bindFunction("__native__log",q__log);\
-api->bindFunction("__native__asin",q__asin);\
-api->bindFunction("__native__rand",__native__random);\
 api->bindFunction("__native__read__stdin",__readline);} while(0)
 
 void reflection_heap_size(nls::VirtualMachine*vm,nls::Value*self){
   vm->Push(nls::Value(static_cast<long double>(vm->getGC()->PtrCount())));
-}
-void q__sqrt(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        if(val.type!=Type::number){
-                vm->Push(Value());
-                return;
-        }
-        if(val.f!=val.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(sqrtl(val.f)));
-}
-void q__pow(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        auto _v = vm->GetArg();
-        if(val.type!=Type::number || _v.type!=Type::number){
-                vm->Push(Value());
-                return;
-        }
-        if(val.f!=val.f || _v.f!=_v.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(powl(val.f,_v.f)));
-}
-void q__log(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        if(val.type!=Type::number){
-                vm->Push(Value());
-                return;
-        }
-        if(val.f!=val.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(logl(val.f)));
-}
-void q__asin(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        if(val.type!=Type::number){
-                vm->Push(Value());
-                return;
-        }
-        if(val.f!=val.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(asinl(val.f)));
-}
-void q__round(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        if(val.type!=Type::number){
-                vm->Push(Value());
-                return;
-        }
-        if(val.f!=val.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(roundl(val.f)));
-}
-void q__sin(nls::VirtualMachine*vm,nls::Value*self){
-        using namespace nls;
-        auto val = vm->GetArg();
-        if(val.f!=val.f){
-                vm->Push(val);
-                return;
-        }
-        vm->Push(Value(sinl(val.f)));
 }
 void str_substr(nls::VirtualMachine*vm,nls::Value* self){
   if(self->type!=nls::Type::str){
@@ -139,13 +57,6 @@ void str_substr(nls::VirtualMachine*vm,nls::Value* self){
   strncpy(_str,str.s->str+static_cast<uint>(from.f),(uint)size.f);
   _str[(uint)size.f]='\0';
   vm->Push(nls::Value(vm->getGC(),new nls::String(_str)));
-}
-void __tostr(nls::VirtualMachine *vm,nls::Value*self){
-  if(self->type!=nls::Type::htable){
-    vm->Push(nls::Value());
-    return;
-  }
-  vm->Push(self->t->get("__str"));
 }
 void __eval(nls::VirtualMachine *vm,nls::Value*){
   auto self = vm->GetArg();
@@ -248,6 +159,7 @@ void __native__typeof(nls::VirtualMachine *vm,nls::Value*){
     k::fun_t: ptr =(const char*) "function"; break;
     k::array: ptr = (const char*)"array"; break;
     k::htable: ptr = (const char*)"object"; break;
+    k::userdata: ptr = (const char*)"userdata"; break;
     default: ptr = "Oops!";
   }
   #undef k
@@ -315,7 +227,4 @@ void __writeline(nls::VirtualMachine *vm,nls::Value*){
 void __reflection_gc_collect(nls::VirtualMachine *vm,nls::Value*){
   vm->CallGCCollection();
   vm->Push(nls::Value());
-}
-void __native__random(nls::VirtualMachine*vm,nls::Value*){
-  vm->Push(nls::Value(static_cast<long double>(rand())));
 }

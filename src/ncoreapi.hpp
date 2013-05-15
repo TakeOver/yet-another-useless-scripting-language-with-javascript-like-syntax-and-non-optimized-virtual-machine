@@ -4,6 +4,7 @@
 #include "nvm.hpp"
 #include "nstd.hpp"
 #include "nbind.hpp"
+#include "nregex.hpp"
 #include <string>
 #include <vector>
 #include <iostream>
@@ -220,7 +221,43 @@ namespace nls{
       saveCode(filedesc);
       close(filedesc);
     }
-
+    inline void LoadLibMath(){
+        NativeBind("rand", std::rand);
+        NativeBind("acos", acosl);
+        NativeBind("__native__cos", cosl);
+        NativeBind("__native__sin", sinl);
+        NativeBind("__native__tg", tanl);
+        NativeBind("__native__ctg",(long double (*)(long double))
+                [](long double f)->long double{
+                        return 1.0/tanl(f);
+                }
+        );
+        NativeBind("__native__log", logl);
+        NativeBind("__native__pow", powl);
+        NativeBind("__native__sqrt",sqrtl);
+        NativeBind("__native__lg",log10);
+        NativeBind("__native__lb",log2l);
+        NativeBind("__native__lgamma",lgammal);
+        NativeBind("__native__round", roundl);
+        NativeBind("__native__ceil",ceill);
+        NativeBind("__native__atan", atanl);
+        NativeBind("__native__asin", asinl);
+        LoadLibComplex();
+    }
+    inline void LoadLibRegex(){
+        bindClass< Regex >("Regex", {
+                {"apply",defmem(Regex::Apply)},
+                {"indexOf",defmem(Regex::IndexOf)},
+                {"exists",defmem(Regex::Exist)},
+                {"construct",defmem(Regex::Create)}});
+    }
+    inline void LoadLibComplex(){
+        //!TODO
+    }
+    inline void LoadAllLibs(){
+        LoadLibRegex();
+        LoadLibMath();
+    }
     inline void InitVM(){
       assert(vm!=nullptr);
       assert(bb!=nullptr);
@@ -228,6 +265,7 @@ namespace nls{
       #define api this
       BINDALL;
       #undef api
+      LoadAllLibs();
     }
 
     inline void InitVM(const char*path){
@@ -236,6 +274,7 @@ namespace nls{
       #define api this
       BINDALL;
       #undef api
+      LoadAllLibs();
     }
 
     void Require(const char*path){
