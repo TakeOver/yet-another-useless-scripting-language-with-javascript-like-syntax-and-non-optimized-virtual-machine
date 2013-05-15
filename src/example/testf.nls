@@ -21,4 +21,5 @@ var s = sys.native(-1234.567);
 print typeof s
 print s
 print sys.experimental_ctg(1)..'=='..Math.ctg(1);
-print sys.test2(123,false,"johOne");
+print sys.test2(123,false,"johOne", std.log);
+print sys.voidf()

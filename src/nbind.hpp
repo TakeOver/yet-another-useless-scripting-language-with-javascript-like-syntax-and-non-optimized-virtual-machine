@@ -5,6 +5,9 @@ namespace nls{
                 throw "Not Implemented";
         }
         template<> void UserType<void>( Value  val){}
+        template<> Value UserType<Value>(Value val){
+                return val;
+        }
         template<> std::string UserType<std::string>( Value  val){
                 if(val.type!=Type::str)
                         return std::string();
@@ -197,13 +200,22 @@ namespace nls{
                         return UserType<RETVAL>(res);
                 }
         };
-        template<typename T,typename ...T1>
-        struct NativeFunction: public AbstractNativeFunction{
+        template<typename T,typename ...T1>struct NativeFunction: public AbstractNativeFunction{
                 T (*ptr)(T1...);
-                ~NativeFunction<T, T1...>(){}
+                virtual ~NativeFunction<T, T1...>(){}
                 NativeFunction<T,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
+                        //fucking magic of c++11 variadic templates! god bless clang!
                         vm->Push(MarshalType(vm->getGC(),(*ptr)(UserType<T1> (vm->GetArg()) ...)));
+                }
+        };
+        template<typename ...T1>  struct NativeFunction<void,T1...>: public AbstractNativeFunction{
+                void (*ptr)(T1...);
+                virtual ~NativeFunction<void, T1...>(){}
+                NativeFunction<void,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        (*ptr)(UserType<T1> (vm->GetArg()) ...);
+                        vm->Push(Value());
                 }
         };
         template<typename T1,typename ...T2> NativeFunction<T1, T2...>* defun(T1(*ptr)(T2...)){

@@ -3,11 +3,16 @@ using namespace nls;
 std::string test(long double val){
         return std::to_string(val);
 }
-uint64_t test2(uint32_t i,bool b,const char* c){
+uint64_t test2(uint32_t i,bool b,const char* c, Value obj){
         std::cout<<i<<'\n'
         <<(b?"true":"false")<<'\n'
         <<c<<'\n';
+        obj.print(std::cout);
+        std::cout<<'\n';
         return 42;
+}
+void testvoid(void){
+        std::cout<<"Ok!\n";
 }
 int main(int argc, char const *argv[])
 {
@@ -15,6 +20,7 @@ int main(int argc, char const *argv[])
         api->Require("testf.nls");
         api->NativeBind("native", test);
         api->NativeBind("test2", test2);
+        api->NativeBind("voidf", testvoid);
         api->NativeBind("experimental_cos", cosl);
         api->NativeBind("experimental_sin", sinl);
         api->NativeBind("experimental_tg", tanl);
