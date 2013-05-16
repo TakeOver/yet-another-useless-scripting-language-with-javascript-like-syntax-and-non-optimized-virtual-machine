@@ -1,6 +1,7 @@
 #pragma once
 #include "nvm.hpp"
 #include "memory"
+#include "nlogger.hpp"
 namespace nls{
         template<typename T> T UserType(Value res){
                 throw "Not Implemented";
@@ -173,11 +174,6 @@ namespace nls{
                         array->set(idx,MarshalType(gc, x));
                 return Value(gc,array);
         }
-        inline void MarshalVariadic(GC*,std::vector<Value>&){}
-        template<typename T,typename ...Args> inline void MarshalVariadic(GC*gc,std::vector<Value>& tmp,T t, Args ... arg){
-                tmp.push_back(MarshalType(gc,t));
-                MarshalVariadic(gc,tmp, arg...);
-        }
         template<typename RETVAL> struct ScriptFunction{
         private:
                 VirtualMachine *vm;
@@ -199,12 +195,12 @@ namespace nls{
                 }
                 template<typename ...Args>
                 RETVAL operator () (Args ... vargs){
-                        std::vector<Value> args;
-                        MarshalVariadic(vm->getGC(),args, vargs...);
                         Value res;
                         try{
-                                res = vm->MakeCall(func, self,args);
-                        }catch(...){}
+                                res = vm->MakeCall(func, self,{MarshalType(vm->getGC(), vargs)...});
+                        }catch(...){
+                                NLogger::log("Failed to vm->call in ScriptFunction");
+                        }
                         return UserType<RETVAL>(res);
                 }
         };
@@ -383,7 +379,7 @@ namespace nls{
         template<class C, typename T1,typename ...T2> NativeMemFunction<C,T1, T2...>* def(T1(*ptr)(C*,T2...)){
                 return new NativeMemFunction<C,T1, T2...>((ptr));
         }
-        //This two macros generate getter and setter for _PUBLIC_ONLY members of class using lambda
+        //This macroses generate getter and setter for _PUBLIC_ONLY members of class using lambda
         #define bindfieldget(classname,varname) {"__get:"#varname,def((decltype(classname::varname)(*)(classname*))\
                 [](classname*ptr)->decltype(classname::varname){\
                         return ptr->varname;\

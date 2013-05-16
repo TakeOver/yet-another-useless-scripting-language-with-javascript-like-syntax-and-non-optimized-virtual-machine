@@ -24,3 +24,5 @@ cl = cl + cl;
 print cl;
 print !cl;
 print ++cl;
+cl.a = 0;
+print !cl

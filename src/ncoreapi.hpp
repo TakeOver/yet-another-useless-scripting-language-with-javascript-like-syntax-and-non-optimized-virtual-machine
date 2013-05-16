@@ -5,6 +5,7 @@
 #include "nstd.hpp"
 #include "nbind.hpp"
 #include "nregex.hpp"
+#include "nlogger.hpp"
 #include <string>
 #include <vector>
 #include <iostream>
