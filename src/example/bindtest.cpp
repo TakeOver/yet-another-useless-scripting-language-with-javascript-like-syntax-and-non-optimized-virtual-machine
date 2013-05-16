@@ -34,6 +34,12 @@ public:
         void print(std::ostream & out){
                 out<<"CLASS{a="<<_a<<"}";
         }
+        std::string toString(){
+                std::cerr<<"CLASS::toString\n";
+                std::stringstream ss;
+                print(ss);
+                return ss.str();
+        }
         CLASS* add(CLASS *cl){
                 return new CLASS(this->_a + cl->_a);
         }
@@ -47,10 +53,11 @@ int main(int argc, char const *argv[])
         api->NativeBind("voidf", testvoid);
         api->bindClass<CLASS>(
                 "TestClass",{
-                        field(CLASS,b),
+                        immutableFieldStrict(CLASS,b),
                         {"__set:a",def(&CLASS::setA)},
                         {"__print",def(&CLASS::print)},
                         {"__get:a",def(&CLASS::getA)},
+                        {"__tostr",def(&CLASS::toString)},
                         {"construct",def((void(*)(CLASS*, long double))
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);
