@@ -226,7 +226,7 @@ namespace nls{
                         vm->Push(Value());
                 }
         };
-        template<typename T1,typename ...T2> NativeFunction<T1, T2...>* defun(T1(*ptr)(T2...)){
+        template<typename T1,typename ...T2> NativeFunction<T1, T2...>* def(T1(*ptr)(T2...)){
                 return new NativeFunction<T1, T2...>(ptr);
         }
         template<class C> class Userdata: public AbstractUserdata{
@@ -272,7 +272,17 @@ namespace nls{
                         }
                         iter->second = whatval;
                 }
-                virtual void del(std::string what){
+                virtual void del(std::string what, VirtualMachine*vm){
+                        auto __del = methods.find("__del:"+what);
+                        if(__del->second.type==Type::fun_t){
+                                vm->call(__del->second.func,Value(vm->getGC(),this));
+                                return;
+                        }
+                        __del = methods.find("__del");
+                        if(__del->second.type==Type::fun_t){
+                                vm->call(__del->second.func,Value(vm->getGC(),this),{Value(vm->getGC(),new String(what))});
+                                return;
+                        }
                         auto iter = methods.find(what);
                         if(iter==methods.end()){
                                 return;
@@ -335,18 +345,19 @@ namespace nls{
         template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* def(T1(C::*ptr)(T2...)){
                 return new NativeMethod<C,T1, T2...>((ptr));
         }
-        template<class C, typename T1,typename ...T2> NativeMemFunction<C,T1, T2...>* defmem(T1(*ptr)(C*,T2...)){
+        template<class C, typename T1,typename ...T2> NativeMemFunction<C,T1, T2...>* def(T1(*ptr)(C*,T2...)){
                 return new NativeMemFunction<C,T1, T2...>((ptr));
         }
         //This two macros generate getter and setter for _PUBLIC_ONLY members of class using lambda
-        #define defvarget(classname,varname) {"__get:"#varname,defmem((decltype(classname::varname)(*)(classname*))\
+        #define bindfieldget(classname,varname) {"__get:"#varname,def((decltype(classname::varname)(*)(classname*))\
         [](classname*ptr)->decltype(classname::varname){\
                 return ptr->varname;\
         })}
 
-        #define defvarset(classname,varname) {"__set:"#varname,defmem((void(*)(classname*,decltype(classname::varname)))\
+        #define bindfieldset(classname,varname) {"__set:"#varname,def((void(*)(classname*,decltype(classname::varname)))\
         [](classname*ptr, decltype(classname::varname) val){\
                 ptr->varname = val;\
         })}
-        #define defvar(classname,varname) defvarset(classname,varname),defvarget(classname,varname)
+        #define field(classname,varname) bindfieldset(classname,varname),bindfieldget(classname,varname)
+        #define constfield(classname,varname) bindfieldget(classname,varname)
 }

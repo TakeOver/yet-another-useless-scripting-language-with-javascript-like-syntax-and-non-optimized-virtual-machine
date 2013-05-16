@@ -47,11 +47,11 @@ int main(int argc, char const *argv[])
         api->NativeBind("voidf", testvoid);
         api->bindClass<CLASS>(
                 "TestClass",{
-                        defvar(CLASS,b),
+                        field(CLASS,b),
                         {"__set:a",def(&CLASS::setA)},
                         {"__print",def(&CLASS::print)},
                         {"__get:a",def(&CLASS::getA)},
-                        {"construct",defmem((void(*)(CLASS*, long double))
+                        {"construct",def((void(*)(CLASS*, long double))
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);
                                 })}});

@@ -122,12 +122,18 @@ namespace nls{
       std::stringstream s;
       if(RD.type==Type::userdata){
         tostr(RS1,s);
-        RD.u->del(s.str());
+        RD.u->del(s.str(), this);
         return;
       }
       if(RD.type==Type::htable){
 	tostr(RS1,s);
-        auto __del = RD.t->get("__del");
+
+        auto __del = RD.t->get("__del:"+s.str());
+        if(__del.type==Type::fun_t){
+                call(__del.func,RD);
+                return;
+        }
+        __del = RD.t->get("__del");
         if(__del.type==Type::fun_t){
                 call(__del.func,RD,{Value(gc,new String(s.str()))});
                 return;
@@ -217,12 +223,12 @@ namespace nls{
       }
     }
     inline void length(){
-      if(RS1.type== Type::htable){        
+      if(RS1.type== Type::htable){
                 auto _fc = RS1.t->get("__len");
                 if(_fc.type==Type::fun_t){
                         RD = call(_fc.func,RS1);
                         return;
-                }                
+                }
 	        RD=Value(RS1.t->table.size()+.0);
       }else if (RS1.type==Type::str){
 	        RD=Value(RS1.s->len+.0);
@@ -236,7 +242,7 @@ namespace nls{
                 if(_fc.type==Type::fun_t){
                         RD = call(_fc.func,RS1);
                         return;
-                }                
+                }
       }else{
                 RD=Value(1.0);
       }
@@ -354,7 +360,7 @@ namespace nls{
 	S.push_back(RD);//pushing new this
         if(prop.func->is_native){
                 this->nativeCall(prop.func);
-                auto tmp = S.back(); 
+                auto tmp = S.back();
                 S.pop_back();
                 clearArgs();
                 S.push_back(tmp);
@@ -727,7 +733,7 @@ namespace nls{
       Addr.push_back(bcsize=(code.size()-2));
     }
   public:
-    inline Value call(Function*func,Value&self,std::vector<Value> args = std::vector<Value>()){
+    inline Value call(Function*func,Value self,std::vector<Value> args = std::vector<Value>()){
         auto __pc = pc;
         auto res = MakeCall(func, self,args);
         if(exitcode==1){
