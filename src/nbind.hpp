@@ -350,14 +350,34 @@ namespace nls{
         }
         //This two macros generate getter and setter for _PUBLIC_ONLY members of class using lambda
         #define bindfieldget(classname,varname) {"__get:"#varname,def((decltype(classname::varname)(*)(classname*))\
-        [](classname*ptr)->decltype(classname::varname){\
-                return ptr->varname;\
-        })}
+                [](classname*ptr)->decltype(classname::varname){\
+                        return ptr->varname;\
+                })}
 
         #define bindfieldset(classname,varname) {"__set:"#varname,def((void(*)(classname*,decltype(classname::varname)))\
-        [](classname*ptr, decltype(classname::varname) val){\
-                ptr->varname = val;\
-        })}
+                [](classname*ptr, decltype(classname::varname) val){\
+                        ptr->varname = val;\
+                })}
         #define field(classname,varname) bindfieldset(classname,varname),bindfieldget(classname,varname)
         #define constfield(classname,varname) bindfieldget(classname,varname)
+
+        #define bindfielddelexception(classname,varname){\
+                "__del:"#varname, def((void(*)(classname*))\
+                                [](classname*p){\
+                                       throw ApiError("Trying to delete immutable field "#classname"::"#varname);\
+                                }\
+                        )\
+        }
+        #define bindfieldsetexception(classname,varname){\
+                "__set:"#varname, def((void(*)(classname*,decltype(classname::varname)))\
+                                [](classname*p,decltype(classname::varname)){\
+                                        throw ApiError("Trying to assign to immutable field "#classname"::"#varname);\
+                                }\
+                        )\
+        }
+        #define bindfielddelnonstrict(classname,varname)\
+                {"__del:"#varname, def((void(*)(classname*)) [](classname*p){})}
+        #define immutableFieldStrict(classname,varname) bindfieldget(classname,varname), bindfielddelexception(classname,varname),\
+                bindfieldsetexception(classname,varname)
+        #define immutableField(classname,varname) bindfielddelnonstrict(classname,varname),bindfieldget(classname,varname)
 }

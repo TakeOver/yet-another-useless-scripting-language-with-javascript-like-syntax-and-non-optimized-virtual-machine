@@ -281,16 +281,9 @@ namespace nls{
     }
     inline void pushArg(){push();}
     inline void print(){
-      if(RD.type == Type::htable){
-                auto str = RD.t->get("__tostr");
-                if(str.type==Type::fun_t){
-                        call(str.func,RD).print(std::cout);
-                        std::cout<< std::endl;
-                        return;
-                }
-      }
-      RD.print(std::cout);
-      std::cout<<std::endl;
+        std::stringstream ss;
+        tostr(RD,ss);
+        std::cout<<ss.str()<<std::endl;
     }
     inline void ret(){
       S.push_back(RD);
