@@ -47,7 +47,7 @@ int main(int argc, char const *argv[])
         api->NativeBind("voidf", testvoid);
         api->bindClass<CLASS>(
                 "TestClass",{
-                        defvarget(CLASS, b),defvarset(CLASS,b),
+                        defvar(CLASS,b),
                         {"__set:a",def(&CLASS::setA)},
                         {"__print",def(&CLASS::print)},
                         {"__get:a",def(&CLASS::getA)},
