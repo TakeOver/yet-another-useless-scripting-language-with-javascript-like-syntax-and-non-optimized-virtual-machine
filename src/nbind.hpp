@@ -342,6 +342,41 @@ namespace nls{
                         vm->Push(Value());
                 }
         };
+        template<class C>struct NativeBinary: public AbstractNativeFunction{
+        typedef C& (C::*method)(C&);
+                method ptr;
+                virtual ~NativeBinary<C>(){}
+                NativeBinary<C>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        if(self->type!=Type::userdata){
+                                vm->Push(Value());
+                                return;
+                        }
+                        Value res;
+                        ((*ThisCast<C>(res=Value(vm->getGC(),self->u->Clone(vm->getGC())))).*ptr)(*ThisCast<C> (vm->GetArg()));
+                        vm->Push(res);
+                }
+        };
+        template<class C>struct NativeUnary: public AbstractNativeFunction{
+        typedef C& (C::*method)();
+                method ptr;
+                virtual ~NativeUnary<C>(){}
+                NativeUnary<C>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        if(self->type!=Type::userdata){
+                                vm->Push(Value());
+                                return;
+                        }
+                        (*ThisCast<C>(*self).*ptr)();
+                        vm->Push(*self);
+                }
+        };
+        template<class C> NativeBinary<C>* def(C&(C::*ptr)(C&)){
+                return new NativeBinary<C>((ptr));
+        }
+        template<class C> NativeUnary<C>* def(C&(C::*ptr)()){
+                return new NativeUnary<C>((ptr));
+        }
         template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* def(T1(C::*ptr)(T2...)){
                 return new NativeMethod<C,T1, T2...>((ptr));
         }

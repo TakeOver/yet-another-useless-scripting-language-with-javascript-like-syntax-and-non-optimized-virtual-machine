@@ -40,8 +40,17 @@ public:
                 print(ss);
                 return ss.str();
         }
-        CLASS* add(CLASS *cl){
-                return new CLASS(this->_a + cl->_a);
+        CLASS& operator+=(CLASS &cl){
+                this->_a+=cl._a;
+                this->b+=cl.b;
+                return *this;
+        }
+        bool operator!(){
+                return !this->_a;
+        }
+        CLASS& operator++(){
+                this->_a++;
+                return *this;
         }
 };
 int main(int argc, char const *argv[])
@@ -58,6 +67,9 @@ int main(int argc, char const *argv[])
                         {"__print",def(&CLASS::print)},
                         {"__get:a",def(&CLASS::getA)},
                         {"__tostr",def(&CLASS::toString)},
+                        {"__add",def(&CLASS::operator+=)},
+                        {"__not",def(&CLASS::operator!)},
+                        {"__inc",def(&CLASS::operator++)},
                         {"construct",def((void(*)(CLASS*, long double))
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);

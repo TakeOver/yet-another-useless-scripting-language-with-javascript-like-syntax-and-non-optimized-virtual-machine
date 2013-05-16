@@ -20,4 +20,7 @@ var reg = sys.Regex("(.*)(Script)(.*)")
 print reg.apply("JavaScript and ActionScript");
 var cl = $TestClass(1.234);
 print cl
-delete cl.b
+cl = cl + cl;
+print cl;
+print !cl;
+print ++cl;

@@ -429,9 +429,9 @@ namespace nls{
         auto object_operator = RS1.u->get(op,this);
         if(object_operator.type==Type::fun_t){
                 if(!is_unary_op(bc[pc].subop))
-                        RD = call(object_operator.func, RS1, {RS1,RS2});
+                        RD = call(object_operator.func, RS1, {RS2});
                 else
-                        RD = call(object_operator.func,RS1,{RS1});
+                        RD = call(object_operator.func,RS1);
                 return;
         }
       }

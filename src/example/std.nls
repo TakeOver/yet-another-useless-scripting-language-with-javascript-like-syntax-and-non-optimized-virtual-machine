@@ -662,3 +662,7 @@ Array.flat = function(){
 $RaiseException = function(msg){
         throw new UserException(msg);
 }
+
+const Regex = sys.Regex;
+
+
