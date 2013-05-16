@@ -33,12 +33,22 @@ namespace nls{
       for(auto&x:native_binds)
         delete x;
     }
-    template <typename T1,typename ...T2>void NativeBind(std::string name,T1(*ptr)(T2...)){
+    template <typename T1,typename ...T2>void NativeBind(std::string name,T1(*ptr)(T2...), bool to_ud = true){
         NativeFunction<T1, T2...> *_F = def(ptr);
         native_binds.push_back(_F); //locking ptr;
-        vm->setSysFunction(name, _F);
+        if(to_ud){
+                setToUD(name, Value(vm->getGC(),new Function(_F)));
+        }else{
+                vm->setSysFunction(name, _F);
+        }
     }
-    template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+    template <typename T1,typename ...T2>void BindToSystem(std::string name,T1(*ptr)(T2...)){
+        NativeBind(name, ptr,false);
+    }
+    template <class C> void bindSysClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+        bindClass<C>(clazz, _mem,false);
+    }
+    template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
         std::unordered_map<std::string, Value> mem;
         for(auto&x:_mem){
                 mem[x.first] = Value(vm->getGC(),new Function(x.second));
@@ -58,7 +68,7 @@ namespace nls{
                 }
                 vm->Push(*self);
         };
-        bindFunction(clazz,constr);
+        bindFunction(clazz,constr,to_ud);
     }
     void RaiseException(std::string msg){
         try{
@@ -174,8 +184,12 @@ namespace nls{
       bb->emit(IL::hlt);
     }
 
-    inline void bindFunction(std::string name, VirtualMachine::native_func_t _f){
-      vm->setSysFunction(name,_f);
+    inline void bindFunction(std::string name, VirtualMachine::native_func_t _f, bool to_ud = true){
+        if(to_ud){
+                getUserData()->set(name,Value(vm->getGC(),new Function(_f)));
+        }else{
+                vm->setSysFunction(name,_f);
+        }
     }
     inline void ResetVM(){
       delete vm;
@@ -222,30 +236,30 @@ namespace nls{
       close(filedesc);
     }
     inline void LoadLibMath(){
-        NativeBind("rand", std::rand);
-        NativeBind("acos", acosl);
-        NativeBind("__native__cos", cosl);
-        NativeBind("__native__sin", sinl);
-        NativeBind("__native__tg", tanl);
-        NativeBind("__native__ctg",(long double (*)(long double))
+        BindToSystem("rand", std::rand);
+        BindToSystem("acos", acosl);
+        BindToSystem("__native__cos", cosl);
+        BindToSystem("__native__sin", sinl);
+        BindToSystem("__native__tg", tanl);
+        BindToSystem("__native__ctg",(long double (*)(long double))
                 [](long double f)->long double{
                         return 1.0/tanl(f);
                 }
         );
-        NativeBind("__native__log", logl);
-        NativeBind("__native__pow", powl);
-        NativeBind("__native__sqrt",sqrtl);
-        NativeBind("__native__lg",log10);
-        NativeBind("__native__lb",log2l);
-        NativeBind("__native__lgamma",lgammal);
-        NativeBind("__native__round", roundl);
-        NativeBind("__native__ceil",ceill);
-        NativeBind("__native__atan", atanl);
-        NativeBind("__native__asin", asinl);
+        BindToSystem("__native__log", logl);
+        BindToSystem("__native__pow", powl);
+        BindToSystem("__native__sqrt",sqrtl);
+        BindToSystem("__native__lg",log10);
+        BindToSystem("__native__lb",log2l);
+        BindToSystem("__native__lgamma",lgammal);
+        BindToSystem("__native__round", roundl);
+        BindToSystem("__native__ceil",ceill);
+        BindToSystem("__native__atan", atanl);
+        BindToSystem("__native__asin", asinl);
         LoadLibComplex();
     }
     inline void LoadLibRegex(){
-        bindClass< Regex >("Regex", {
+        bindSysClass< Regex >("Regex", {
                 {"apply",def(&Regex::Apply)},
                 {"indexOf",def(&Regex::IndexOf)},
                 {"exists",def(&Regex::Exist)},

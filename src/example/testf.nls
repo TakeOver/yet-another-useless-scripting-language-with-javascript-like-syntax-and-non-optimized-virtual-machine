@@ -18,6 +18,6 @@ $variadic = function(num,arg,args...){
 }
 var reg = sys.Regex("(.*)(Script)(.*)")
 print reg.apply("JavaScript and ActionScript");
-var cl = sys.TestClass(1.234);
+var cl = $TestClass(1.234);
 print cl
 delete cl.b

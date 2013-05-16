@@ -3,21 +3,21 @@
 #include "nparser.hpp"
 #pragma once
 namespace nls{
-        
+
 #define BINDALL \
         do{ \
-                api->bindFunction("__native__substr",str_substr);\
-                api->bindFunction("__native__unsafe__evaluate",__eval);\
-                api->bindFunction("__native__safe__json__parse",__json_parse);\
-                api->bindFunction("__native__next",__iterator_next);\
-                api->bindFunction("__native__typeof",__native__typeof);\
-                api->bindFunction("__init__safe__istream",__init_safe_file_istream);\
-                api->bindFunction("__native__write__to__file",__write__to__file);\
-                api->bindFunction("__native__write__stdout",__writeline);\
-                api->bindFunction("__native__reflection_heap_size",reflection_heap_size);\
-                api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect);\
+                api->bindFunction("__native__substr",str_substr,false);\
+                api->bindFunction("__native__unsafe__evaluate",__eval,false);\
+                api->bindFunction("__native__safe__json__parse",__json_parse,false);\
+                api->bindFunction("__native__next",__iterator_next,false);\
+                api->bindFunction("__native__typeof",__native__typeof,false);\
+                api->bindFunction("__init__safe__istream",__init_safe_file_istream,false);\
+                api->bindFunction("__native__write__to__file",__write__to__file,false);\
+                api->bindFunction("__native__write__stdout",__writeline,false);\
+                api->bindFunction("__native__reflection_heap_size",reflection_heap_size,false);\
+                api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect,false);\
                 srand(time(nullptr));\
-                api->bindFunction("__native__read__stdin",__readline);\
+                api->bindFunction("__native__read__stdin",__readline,false);\
         }while(0)
 
         void reflection_heap_size(VirtualMachine*vm,Value*self){
