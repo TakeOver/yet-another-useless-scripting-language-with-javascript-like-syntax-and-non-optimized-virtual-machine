@@ -16,9 +16,7 @@ namespace nls{
                                 throw std::string("Invalid regex");
                         }
                 }
-                static std::vector<std::string> Apply(Regex* regex,std::string what){
-                        auto reg = regex->reg;
-                        auto cm = regex->cm;
+                std::vector<std::string> Apply(std::string what){
                         try{
                                 std::regex_match(what.c_str(), cm,reg);
                         }catch(...){
@@ -26,9 +24,7 @@ namespace nls{
                         }
                         return std::vector<std::string> (cm.begin(),cm.end());
                 }
-                static int32_t IndexOf(Regex* regex,std::string what){
-                        auto reg = regex->reg;
-                        auto cm = regex->cm;
+                int32_t IndexOf(std::string what){
                         try{
                                 std::regex_match(what.c_str(), cm,reg);
                         }catch(...){
@@ -38,11 +34,11 @@ namespace nls{
                                 return -1;
                         return cm.position();
                 }
-                static bool Exist(Regex* regex,std::string what){
-                        return Regex::IndexOf(regex, what)!=-1;
+                bool Exist(std::string what){
+                        return IndexOf(what)!=-1;
                 }
-                static void Create(Regex* regex,std::string templ){
-                        *regex = Regex(templ);
+                void Create(std::string templ){
+                        *this = Regex(templ);
                 }
         };
 }

@@ -38,15 +38,6 @@ public:
                 return new CLASS(this->_a + cl->_a);
         }
 };
-void setA(CLASS * cl,long double val){
-        cl->setA(val);
-}
-long double getA(CLASS * cl){
-        return cl->getA();
-}
-void __print(CLASS * cl){
-        cl->print(std::cout);
-}
 int main(int argc, char const *argv[])
 {
         NlsApi* api = new NlsApi();
@@ -57,9 +48,9 @@ int main(int argc, char const *argv[])
         api->bindClass<CLASS>(
                 "TestClass",{
                         defvarget(CLASS, b),defvarset(CLASS,b),
-                        {"__set:a",defmem(setA)},
-                        {"__print",defmem(__print)},
-                        {"__get:a",defmem(getA)},
+                        {"__set:a",def(&CLASS::setA)},
+                        {"__print",def(&CLASS::print)},
+                        {"__get:a",def(&CLASS::getA)},
                         {"construct",defmem((void(*)(CLASS*, long double))
                                 [](CLASS*cl,long double v){
                                         cl->setA(v);

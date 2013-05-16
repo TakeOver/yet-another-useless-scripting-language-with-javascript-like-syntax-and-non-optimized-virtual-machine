@@ -246,10 +246,10 @@ namespace nls{
     }
     inline void LoadLibRegex(){
         bindClass< Regex >("Regex", {
-                {"apply",defmem(Regex::Apply)},
-                {"indexOf",defmem(Regex::IndexOf)},
-                {"exists",defmem(Regex::Exist)},
-                {"construct",defmem(Regex::Create)}});
+                {"apply",def(&Regex::Apply)},
+                {"indexOf",def(&Regex::IndexOf)},
+                {"exists",def(&Regex::Exist)},
+                {"construct",def(&Regex::Create)}});
     }
     inline void LoadLibComplex(){
         //!TODO

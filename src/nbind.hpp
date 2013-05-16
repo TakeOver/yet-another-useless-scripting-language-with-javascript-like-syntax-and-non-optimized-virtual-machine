@@ -296,25 +296,25 @@ namespace nls{
                         throw nls::ApiError("Types mismatch. Failed to cast val.u to Userdata<C>*");
                 return self->getData();
         }
-        template<class C,typename T,typename ...T1>struct NativeMethod: public AbstractNativeFunction{
+        template<class C,typename T,typename ...T1>struct NativeMemFunction: public AbstractNativeFunction{
                 T (*ptr)(C*,T1...);
-                virtual ~NativeMethod<C,T, T1...>(){}
-                NativeMethod<C,T,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual ~NativeMemFunction<C,T, T1...>(){}
+                NativeMemFunction<C,T,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
                         vm->Push(MarshalType(vm->getGC(),ptr((ThisCast<C>(*self)), UserType<T1> (vm->GetArg()) ...)));
                 }
         };
-        template<class C,typename ...T1>  struct NativeMethod<C,void,T1...>: public AbstractNativeFunction{
+        template<class C,typename ...T1>  struct NativeMemFunction<C,void,T1...>: public AbstractNativeFunction{
                 void (*ptr)(C*,T1...);
-                virtual ~NativeMethod<C,void, T1...>(){}
-                NativeMethod<C,void,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual ~NativeMemFunction<C,void, T1...>(){}
+                NativeMemFunction<C,void,T1...>(decltype(ptr) ptr):ptr(ptr){}
                 virtual void call(VirtualMachine*vm,Value * self){
                         ptr((ThisCast<C>(*self)), UserType<T1> (vm->GetArg()) ...);
                         vm->Push(Value());
                 }
         };
-        template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* defmem(T1(*ptr)(C*,T2...)){
-                return new NativeMethod<C,T1, T2...>((ptr));
+        template<class C, typename T1,typename ...T2> NativeMemFunction<C,T1, T2...>* defmem(T1(*ptr)(C*,T2...)){
+                return new NativeMemFunction<C,T1, T2...>((ptr));
         }
         //This two macros generate getter and setter for _PUBLIC_ONLY members of class using lambda
         #define defvarget(classname,varname) {"__get:"#varname,defmem((decltype(classname::varname)(*)(classname*))\
@@ -326,4 +326,26 @@ namespace nls{
         [](classname*ptr, decltype(classname::varname) val){\
                 ptr->varname = val;\
         })}
+        template<class C,typename T,typename ...T1>struct NativeMethod: public AbstractNativeFunction{
+        typedef T (C::*method)(T1...);
+                method ptr;
+                virtual ~NativeMethod<C,T, T1...>(){}
+                NativeMethod<C,T,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        vm->Push(MarshalType(vm->getGC(),((*ThisCast<C>(*self)).*ptr)(UserType<T1> (vm->GetArg()) ...)));
+                }
+        };
+        template<class C,typename ...T1>  struct NativeMethod<C,void,T1...>: public AbstractNativeFunction{
+        typedef void (C::*method)(T1...);
+                method ptr;
+                virtual ~NativeMethod<C,void, T1...>(){}
+                NativeMethod<C,void,T1...>(decltype(ptr) ptr):ptr(ptr){}
+                virtual void call(VirtualMachine*vm,Value * self){
+                        ((*ThisCast<C>(*self)).*ptr)(UserType<T1> (vm->GetArg()) ...);
+                        vm->Push(Value());
+                }
+        };
+        template<class C, typename T1,typename ...T2> NativeMethod<C,T1, T2...>* def(T1(C::*ptr)(T2...)){
+                return new NativeMethod<C,T1, T2...>((ptr));
+        }
 }
