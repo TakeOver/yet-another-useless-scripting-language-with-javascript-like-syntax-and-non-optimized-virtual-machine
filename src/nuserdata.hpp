@@ -16,7 +16,6 @@ namespace nls{
                 virtual void set(std::string off,Value what, VirtualMachine*)=0;
                 virtual void del(std::string off, VirtualMachine*) = 0;
                 virtual void MarkAll(GC*gc) = 0;
-                virtual void SetMethods(std::unordered_map<std::string, Value>)=0;
                 virtual AbstractUserdata* Clone(GC*)= 0;
         };
 }

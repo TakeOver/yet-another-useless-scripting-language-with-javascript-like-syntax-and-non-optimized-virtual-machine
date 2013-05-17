@@ -58,8 +58,7 @@ namespace nls{
         auto constr = [clazz,mem,this](VirtualMachine*vm,Value*self){
                 try{
                         self->type = Type::userdata;
-                        self->u = new Userdata<C>();
-                        self->u->SetMethods(mem);
+                        self->u = new Userdata<C>(mem);
                         auto init = self->u->get("construct",vm);
                         if(init.type==Type::fun_t){
                                 vm->callWithReplaceArgs(init.func,*self);
@@ -74,7 +73,9 @@ namespace nls{
     void RaiseException(std::string msg){
         try{
                 getFunction<void>("RaiseException")(msg);
-        }catch(...){}
+        }catch(...){
+                NLogger::log("Failed to get 'RaiseException' in NlsApi::RaiseException with msg:'"+msg+"'");
+        }
     }
     Value createString(const char*str){
         return Value(getGC(),new String(str));
@@ -309,7 +310,15 @@ namespace nls{
       assert(vm!=nullptr);
       if(vm->isInitialized() == false)
 	throw ApiError("Cannot execute non-init. VirtualMachine");
-      vm->run();
+      try{
+        vm->run();
+      }catch(vm_error& err){
+        NLogger::log(std::string("Catched vm_error in NlsApi::Execute, err.what():'")+err.what()+"'");
+      }catch(ApiError& err){
+        NLogger::log(std::string("Catcher ApiError in NlsApi::Execute, err.what():'")+err.what()+"'");
+      }catch(...){
+        NLogger::log("Catched unknown exception in NlsApi::Execute");
+      }
     }
 
     inline void Release(){

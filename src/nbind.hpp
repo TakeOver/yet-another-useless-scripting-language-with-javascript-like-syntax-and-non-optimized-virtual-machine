@@ -232,10 +232,7 @@ namespace nls{
                 virtual ~Userdata<C>(){
                                 delete clazz;
                 }
-                virtual void SetMethods(std::unordered_map<std::string, Value> v){
-                        methods = v;
-                }
-                Userdata<C>(){
+                Userdata<C>(decltype(methods) mem):methods(mem){
                         clazz = new C();
                 }
                 Userdata<C>(C*clazz, decltype(methods) &methods):clazz(clazz), methods(methods){}

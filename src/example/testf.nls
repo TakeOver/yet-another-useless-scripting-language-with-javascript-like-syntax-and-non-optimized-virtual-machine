@@ -16,7 +16,7 @@ $variadic = function(num,arg,args...){
                 return;
         $variadic(num+1,...args);
 }
-var reg = sys.Regex("(.*)(Script)(.*)")
+var reg = Regex("(.*)(Script)(.*)")
 print reg.apply("JavaScript and ActionScript");
 var cl = $TestClass(1.234);
 print cl
