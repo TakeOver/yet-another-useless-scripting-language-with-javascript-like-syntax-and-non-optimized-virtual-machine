@@ -21,12 +21,16 @@ namespace nls{
         std::vector<std::pair<std::string,std::string> > definitions;
         std::vector<std::pair<std::string,std::string> >aliases;
         std::vector<AbstractNativeFunction*> native_binds;
-  public:
-
-        NlsApi(){
+        std::vector<const char*> _argv;
+        void __init__(){
                 rh = new RefHolder();
                 bb = new BasicBlock(rh);
                 vm = new VirtualMachine();
+        }
+  public:
+
+        NlsApi(){
+                __init__();
         }
         ~NlsApi(){
                 delete bb;
@@ -315,7 +319,12 @@ namespace nls{
       #undef api
       LoadAllLibs();
     }
-
+    inline void SetMainArgs(int &argc, char const** &argv){
+        for(uint i=0;i<argc;++i)
+                _argv.push_back(argv[i]);
+        BindSysVariable("argc", argc,true);
+        BindSysVariable("argv", _argv,true);
+    }
     inline void InitVM(const char*path){
       assert(vm!=nullptr);
       vm->LoadAssembly(path);

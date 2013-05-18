@@ -55,16 +55,12 @@ public:
 };
 int main(int argc, char const *argv[])
 {
-        std::vector<const char*> _argv;
-        for(uint i=0;i<argc;++i)
-                _argv.push_back(argv[i]);
         NlsApi* api = new NlsApi();
         api->Require("testf.nls");
+        api->SetMainArgs(argc, argv);
         api->NativeBind("native", test);
         api->NativeBind("test2", test2);
         api->NativeBind("voidf", testvoid);
-        api->BindSysVariable("argc", argc,true);
-        api->BindSysVariable("argv", _argv,true);
         api->bindClass<CLASS>(
                 "TestClass",{
                         immutableFieldStrict(CLASS,b),
