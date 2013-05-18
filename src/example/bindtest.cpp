@@ -62,7 +62,10 @@ int main(int argc, char const *argv[])
         api->NativeBind("test2", test2);
         api->NativeBind("voidf", testvoid);
         api->bindClass<CLASS>(
-                "TestClass",{
+                "TestClass",(CLASS*(*)(long double))
+                                [](long double v)->CLASS*{
+                                        return new CLASS(v);
+                                },{
                         immutableFieldStrict(CLASS,b),
                         {"__set:a",def(&CLASS::setA)},
                         {"__print",def(&CLASS::print)},
@@ -70,11 +73,7 @@ int main(int argc, char const *argv[])
                         {"__tostr",def(&CLASS::toString)},
                         {"__add",def(&CLASS::operator+=)},
                         {"__not",def(&CLASS::operator!)},
-                        {"__inc",def(&CLASS::operator++)},
-                        {"construct",def((void(*)(CLASS*, long double))
-                                [](CLASS*cl,long double v){
-                                        cl->setA(v);
-                                })}});
+                        {"__inc",def(&CLASS::operator++)}});
         api->Execute();
         ScriptFunction<std::string> func = api->getFunction<std::string>("hello");
         std::cout<<func()<<'\n';

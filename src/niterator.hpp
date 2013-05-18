@@ -7,9 +7,10 @@
 namespace nls{
         class HTableIterator{
                 using iter = std::unordered_map<std::string, Value>::iterator;
-                iter end, current;
+                iter current,end;
                 public:
                         HTableIterator(){}
+                        HTableIterator(iter current, iter end):current(current),end(end){}
                         void Construct(std::unordered_map<std::string, Value>& obj){
                                 end = obj.end();
                                 current = obj.begin();
@@ -22,20 +23,20 @@ namespace nls{
                         bool valid(){
                                 return current != end;
                         }
-                        void create(Value val){
+                        static HTableIterator* create(Value val){
                                 if( val.type!=Type::htable){
-                                        this->current = iter(),
-                                        this->end = this->current;
+                                        return new HTableIterator(iter(), iter());
                                 }else{
-                                        this->Construct(val.t->table);
+                                        return new HTableIterator(val.t->table.begin(),val.t->table.end());
                                 }
                         }
         };
         class ArrayIterator{
                 using iter = std::map<uint64_t, Value>::iterator;
-                iter end, current;
+                iter current,end;
                 public:
                         ArrayIterator(){}
+                        ArrayIterator(iter current,iter end):current(current),end(end){}
                         void Construct(std::map<uint64_t, Value>& arr){
                                 end = arr.end();
                                 current = arr.begin();
@@ -47,12 +48,11 @@ namespace nls{
                         bool valid(){
                                 return current != end;
                         }
-                        static void create(ArrayIterator* it,Value val){
+                        static ArrayIterator* create(Value val){
                                 if( val.type!=Type::array){
-                                        it->current = iter(),
-                                        it->end = it->current;
+                                        return new ArrayIterator(iter(), iter());
                                 }else{
-                                        it->Construct(val.a->arr);
+                                        return new ArrayIterator(val.a->arr.begin(),val.a->arr.end());
                                 }
                         }
         };

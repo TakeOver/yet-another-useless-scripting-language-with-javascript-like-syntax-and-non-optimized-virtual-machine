@@ -86,28 +86,25 @@ namespace nls{
                         NativeBind(name, ptr,false);
                 }
 
-                template <class C> void bindSysClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
-                        bindClass<C>(clazz, _mem,false);
+                template <class C,typename... CArgs> void bindSysClass(std::string clazz,C*(* allocator)(CArgs...),std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+                        bindClass<C>(clazz,allocator, _mem,false);
                 }
 
-                template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
+                template <class C,typename ...CArgs> void bindClass(std::string clazz,C*(* allocator)(CArgs...), std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
                         std::unordered_map<std::string, Value> mem;
                         for(auto&x:_mem){
                                 mem[x.first] = Value(vm->getGC(),new Function(x.second));
                                 native_binds.push_back(x.second);
                         }
-                        auto constr = [clazz,mem,this](VirtualMachine*vm,Value*self){
+                        auto constr = [clazz,mem,this, allocator](VirtualMachine*vm,Value*){
+                                Value self;
                                 try{
-                                        self->type = Type::userdata;
-                                        self->u = new Userdata<C>(mem);
-                                        auto init = self->u->get("construct",vm);
-                                        if(init.type==Type::fun_t){
-                                                vm->callWithReplaceArgs(init.func,*self);
-                                        }
+                                        self.type = Type::userdata;
+                                        self.u = new Userdata<C>(allocator(UserType<CArgs> (vm->GetArg())...),mem);
                                 }catch(std::string msg){
                                         this->RaiseException(msg);
                                 }
-                                vm->Push(*self);
+                                vm->Push(self);
                         };
                         bindFunction(clazz,constr,to_ud);
                 }
@@ -340,12 +337,12 @@ namespace nls{
                         BindToSystem("__native__read__stdin",readLine);
                         BindToSystem("__native__substr",substr);\
                 }
-                        inline void LoadLibRegex(){
-                        bindSysClass< Regex >("Regex", {
+
+                inline void LoadLibRegex(){
+                        bindSysClass< Regex >("Regex",Regex::Create, {
                                 {"apply",def(&Regex::Apply)},
                                 {"indexOf",def(&Regex::IndexOf)},
-                                {"exists",def(&Regex::Exist)},
-                                {"construct",def(&Regex::Create)}});
+                                {"exists",def(&Regex::Exist)}});
                 }
 
                 inline void LoadLibComplex(){
@@ -353,14 +350,12 @@ namespace nls{
                 }
 
                 inline void LoadIterators(){
-                        bindSysClass<HTableIterator>("__obj__iter", {
-                                {"construct", def(&HTableIterator::create)},
+                        bindSysClass<HTableIterator>("__obj__iter",HTableIterator::create, {
                                 {"next",def(&HTableIterator::next)},
                                 {"valid",def(&HTableIterator::valid)},
                                 {"__inc",def(&HTableIterator::next)}
                         });
-                        bindSysClass<ArrayIterator>("__arr__iter", {
-                                {"construct", def(&ArrayIterator::create)},
+                        bindSysClass<ArrayIterator>("__arr__iter",ArrayIterator::create ,{
                                 {"next",def(&ArrayIterator::next)},
                                 {"valid",def(&ArrayIterator::valid)},
                                 {"__inc",def(&ArrayIterator::next)}

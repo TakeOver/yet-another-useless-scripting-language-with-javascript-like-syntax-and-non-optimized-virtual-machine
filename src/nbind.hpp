@@ -232,10 +232,13 @@ namespace nls{
                 virtual ~Userdata<C>(){
                                 delete clazz;
                 }
-                Userdata<C>(decltype(methods) mem):methods(mem){
+                Userdata<C>(const decltype(methods) mem):methods(mem){
                         clazz = new C();
                 }
-                Userdata<C>(C*clazz, decltype(methods) &methods):clazz(clazz), methods(methods){}
+                Userdata<C>(C* ptr){
+                        clazz = ptr;
+                }
+                Userdata<C>(C*clazz,const decltype(methods) methods):clazz(clazz), methods(methods){}
                 virtual void MarkAll(GC*gc){
                         for(auto&x:methods)
                                 x.second.markAll (gc);
@@ -375,6 +378,9 @@ namespace nls{
         }
         template<class C, typename T1,typename ...T2> NativeMemFunction<C,T1, T2...>* def(T1(*ptr)(C*,T2...)){
                 return new NativeMemFunction<C,T1, T2...>((ptr));
+        }
+        template<typename C> inline Value MarshalType(GC*gc, C* ptr){
+                return Value(gc,new Userdata<C>(ptr));
         }
         //This macroses generate getter and setter for _PUBLIC_ONLY members of class using lambda
         #define bindfieldget(classname,varname) {"__get:"#varname,def((decltype(classname::varname)(*)(classname*))\

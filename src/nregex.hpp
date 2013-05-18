@@ -7,8 +7,8 @@ namespace nls{
                 std::regex reg;
                 std::cmatch cm;
         public:
-                Regex(){}
                 ~Regex(){}
+                Regex(){}
                 Regex(std::string regex){
                         try{
                                 reg = std::regex(regex);
@@ -37,8 +37,8 @@ namespace nls{
                 bool Exist(std::string what){
                         return IndexOf(what)!=-1;
                 }
-                void Create(std::string templ){
-                        *this = Regex(templ);
+                static Regex* Create(std::string templ){
+                        return new Regex(templ);
                 }
         };
 }
