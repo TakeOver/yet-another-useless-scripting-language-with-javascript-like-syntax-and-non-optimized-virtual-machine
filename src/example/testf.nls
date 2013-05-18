@@ -30,3 +30,6 @@ var obj = {"a":1,"b":2,"c":3};
 for(var i in obj){
         print i;
 }
+
+print sys.argc
+print sys.argv

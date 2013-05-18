@@ -171,7 +171,7 @@ namespace nls{
                 auto array = new Array<Value>();
                 uint64_t idx = 0;
                 for(auto&x:arr)
-                        array->set(idx,MarshalType(gc, x));
+                        array->set(idx++,MarshalType(gc, x));
                 return Value(gc,array);
         }
         template<typename RETVAL> struct ScriptFunction{

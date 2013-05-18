@@ -14,63 +14,79 @@
 namespace nls{
   class NlsApi{
   private:
-    BasicBlock *bb;
-    VirtualMachine * vm;
-    RefHolder * rh;
-    uint16_t rootreg = 0;
-    std::vector<std::pair<std::string,std::string> > definitions;
-    std::vector<std::pair<std::string,std::string> >aliases;
-    std::vector<AbstractNativeFunction*> native_binds;
+        BasicBlock *bb;
+        VirtualMachine * vm;
+        RefHolder * rh;
+        uint16_t rootreg = 0;
+        std::vector<std::pair<std::string,std::string> > definitions;
+        std::vector<std::pair<std::string,std::string> >aliases;
+        std::vector<AbstractNativeFunction*> native_binds;
   public:
 
-    NlsApi(){
-      rh = new RefHolder();
-      bb = new BasicBlock(rh);
-      vm = new VirtualMachine();
-    }
-    ~NlsApi(){
-      delete bb;
-      delete vm;
-      delete rh;
-      for(auto&x:native_binds)
-        delete x;
-    }
-    template <typename T1,typename ...T2>void NativeBind(std::string name,T1(*ptr)(T2...), bool to_ud = true){
-        NativeFunction<T1, T2...> *_F = def(ptr);
-        native_binds.push_back(_F); //locking ptr;
-        if(to_ud){
-                setToUD(name, Value(vm->getGC(),new Function(_F)));
-        }else{
-                vm->setSysFunction(name, _F);
+        NlsApi(){
+                rh = new RefHolder();
+                bb = new BasicBlock(rh);
+                vm = new VirtualMachine();
         }
-    }
-    template <typename T1,typename ...T2>void BindToSystem(std::string name,T1(*ptr)(T2...)){
-        NativeBind(name, ptr,false);
-    }
-    template <class C> void bindSysClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
-        bindClass<C>(clazz, _mem,false);
-    }
-    template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
-        std::unordered_map<std::string, Value> mem;
-        for(auto&x:_mem){
-                mem[x.first] = Value(vm->getGC(),new Function(x.second));
-                native_binds.push_back(x.second);
+        ~NlsApi(){
+                delete bb;
+                delete vm;
+                delete rh;
+                for(auto&x:native_binds)
+                        delete x;
         }
-        auto constr = [clazz,mem,this](VirtualMachine*vm,Value*self){
-                try{
-                        self->type = Type::userdata;
-                        self->u = new Userdata<C>(mem);
-                        auto init = self->u->get("construct",vm);
-                        if(init.type==Type::fun_t){
-                                vm->callWithReplaceArgs(init.func,*self);
-                        }
-                }catch(std::string msg){
-                        this->RaiseException(msg);
+
+        template <typename C> void BindVariable(std::string name,C& var, bool constant = false,bool to_ud = true){
+                bindFunction( "__get:" + name,
+                        [ &var ](VirtualMachine*vm,Value*){
+                                vm->Push(MarshalType(vm->getGC(), var));
+                        },to_ud);
+                if( ! constant ){
+                        bindFunction( "__set:" + name,
+                                [ &var ] ( VirtualMachine* vm, Value* ){
+                                        var = UserType<C>(vm->GetArg());
+                                }, to_ud);
                 }
-                vm->Push(*self);
-        };
-        bindFunction(clazz,constr,to_ud);
-    }
+        }
+        template <typename C> void BindSysVariable(std::string name, C& var, bool constant = false){
+                BindVariable(name, var,constant,false);
+        }
+        template <typename T1,typename ...T2>void NativeBind(std::string name,T1(*ptr)(T2...), bool to_ud = true){
+                NativeFunction<T1, T2...> *_F = def(ptr);
+                native_binds.push_back(_F); //locking ptr;
+                if(to_ud){
+                        setToUD(name, Value(vm->getGC(),new Function(_F)));
+                }else{
+                        vm->setSysFunction(name, _F);
+                }
+        }
+        template <typename T1,typename ...T2>void BindToSystem(std::string name,T1(*ptr)(T2...)){
+                NativeBind(name, ptr,false);
+        }
+        template <class C> void bindSysClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+                bindClass<C>(clazz, _mem,false);
+        }
+        template <class C> void bindClass(std::string clazz,std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
+                std::unordered_map<std::string, Value> mem;
+                for(auto&x:_mem){
+                        mem[x.first] = Value(vm->getGC(),new Function(x.second));
+                        native_binds.push_back(x.second);
+                }
+                auto constr = [clazz,mem,this](VirtualMachine*vm,Value*self){
+                        try{
+                                self->type = Type::userdata;
+                                self->u = new Userdata<C>(mem);
+                                auto init = self->u->get("construct",vm);
+                                if(init.type==Type::fun_t){
+                                        vm->callWithReplaceArgs(init.func,*self);
+                                }
+                        }catch(std::string msg){
+                                this->RaiseException(msg);
+                        }
+                        vm->Push(*self);
+                };
+                bindFunction(clazz,constr,to_ud);
+        }
     void RaiseException(std::string msg){
         try{
                 getFunction<void>("RaiseException")(msg);
