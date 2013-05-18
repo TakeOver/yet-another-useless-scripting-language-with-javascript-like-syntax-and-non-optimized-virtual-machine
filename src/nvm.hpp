@@ -199,7 +199,6 @@ namespace nls{
       if(RS1.type==Type::str)
 	RD.s=RD.s->Clone();
     }
-    inline void tostr(){}
     inline void objAlloc(){
       assert(bc[pc].dest<=registers);
       RD=Value(gc,new Table<Value>());
@@ -254,34 +253,40 @@ namespace nls{
         }
         Args.pop_back();
     }
-    inline void nop(){}
+
     inline void dup(){
       S.push_back(S.back());
     }
+
     inline void pushNewObj(){
       S.push_back(Value(gc,new Table<Value>()));
     }
+
     inline void push(){
       assert(bc[pc].dest<=registers);
       S.push_back(RD);
     }
+
     inline void pop(){
       assert(bc[pc].dest<=registers);
       assert(!S.empty());
       RD=S.back();
       S.pop_back();
     }
+
     inline void top(){
       assert(bc[pc].dest<=registers);
       assert(!S.empty());
       RD=S.back();
     }
-    inline void pushArg(){push();}
+
+
     inline void print(){
         std::stringstream ss;
         tostr(RD,ss);
         std::cout<<ss.str()<<std::endl;
     }
+
     inline void ret(){
         S.push_back(RD);
         if(Addr.size()){
@@ -299,23 +304,26 @@ namespace nls{
     }
 
     inline void nativeCall(Function*func){
-      auto self = S.back();
-      S.pop_back();
-      --Args.back();
+        auto self = S.back();
+        S.pop_back();
+        --Args.back();
         if(func->is_abstract){
                 func->createCall(this, &self);
                 return;
         }
-      native_func_t callee = (native_func_t)func->getNativeCall();
-      callee(this,&self);
+        native_func_t callee = (native_func_t)func->getNativeCall();
+        callee(this,&self);
     }
+
     inline void call(){
-      #ifdef DEBUG_INFO
+
+#ifdef DEBUG_INFO
         if(RS2.type==Type::str)
                 __funcs.push_back(RS2.s->str);
         else
                 __funcs.push_back("???");
-        #endif
+#endif
+
         Args.push_back(bc[pc].src1);
         while(!Unpacked.empty()){
                 if(!Unpacked.back()){
@@ -325,72 +333,73 @@ namespace nls{
                 }
                 Unpacked.pop_back();
         }
-      if(RD.type == Type::fun_t){
-	if(RD.func->is_native){
-	  nativeCall(RD.func);
-	  auto tmp = S.back();
-	  S.pop_back();
-	  clearArgs();
-	  S.push_back(tmp);
+        if(RD.type == Type::fun_t){
+	        if(RD.func->is_native){
+	               nativeCall(RD.func);
+	               auto tmp = S.back();
+	               S.pop_back();
+	               clearArgs();
+	               S.push_back(tmp);
 #ifdef DEBUG_INFO
-          __funcs.pop_back();
+                        __funcs.pop_back();
 #endif
-	  return;
-	}
-	uint off = RD.func->getCall();
-	Addr.push_back(pc);
-	pc = off;
-	return;
-      }
-      if(RD.type == Type::htable){
-	auto prop = RD.t->get("__call");
-	if(prop.type!=Type::fun_t){
-	  clearArgs();
-	  S.push_back(Value());
-#ifdef DEBUG_INFO
-          __funcs.pop_back();
-#endif
-	  return;
-	}
-	S.pop_back();
-	S.push_back(RD);//pushing new this
-        if(prop.func->is_native){
-                this->nativeCall(prop.func);
-                auto tmp = S.back();
-                S.pop_back();
-                clearArgs();
-                S.push_back(tmp);
-                return;
+	               return;
+	       }
+	       uint off = RD.func->getCall();
+	       Addr.push_back(pc);
+	       pc = off;
+	       return;
         }
-	uint offs = prop.func->getCall();
-	Addr.push_back(pc);
-	pc = offs;
-	return;
-      }else if(RD.type==Type::userdata){
-        auto __call = RD.u->get("__call",this);
-        if(__call.type==Type::fun_t){
-                if(__call.func->is_native){
-                        nativeCall(__call.func);
+        if(RD.type == Type::htable){
+	        auto prop = RD.t->get("__call");
+	        if(prop.type!=Type::fun_t){
+	               clearArgs();
+	               S.push_back(Value());
+#ifdef DEBUG_INFO
+                       __funcs.pop_back();
+#endif
+	               return;
+	        }
+	        S.pop_back();
+	        S.push_back(RD);//pushing new this
+                if(prop.func->is_native){
+                        this->nativeCall(prop.func);
                         auto tmp = S.back();
                         S.pop_back();
                         clearArgs();
                         S.push_back(tmp);
                         return;
                 }
-                uint offs = __call.func->getCall();
-                Addr.push_back(pc);
-                pc = offs;
-                return;
+	        uint offs = prop.func->getCall();
+	        Addr.push_back(pc);
+	        pc = offs;
+	        return;
+        }else if(RD.type==Type::userdata){
+                auto __call = RD.u->get("__call",this);
+                if(__call.type==Type::fun_t){
+                        if(__call.func->is_native){
+                                nativeCall(__call.func);
+                                auto tmp = S.back();
+                                S.pop_back();
+                                clearArgs();
+                                S.push_back(tmp);
+                                return;
+                        }
+                        uint offs = __call.func->getCall();
+                        Addr.push_back(pc);
+                        pc = offs;
+                        return;
+                }
         }
-      }
-      clearArgs();
-      S.push_back(Value());
+        clearArgs();
+        S.push_back(Value());
 #ifdef DEBUG_INFO
-      __funcs.pop_back();
+        __funcs.pop_back();
 #endif
     }
+
     inline void createFunc(){
-      RD=Value(gc,new Function(bc[pc].src1));
+        RD=Value(gc,new Function(bc[pc].src1));
     }
     std::map<uint8_t, std::string> overload_operators = {
         {IL::Math::add,"__add"},
@@ -416,54 +425,56 @@ namespace nls{
         return q==inc || q==dec || q==neg || q==log_not;
     }
     inline void math_op(){
-      using namespace IL::Math;
-      if(RS1.type==Type::htable){
-        auto op  = overload_operators[bc[pc].subop];
-        auto object_operator = RS1.t->get(op);
-        if(object_operator.type==Type::fun_t){
-                if(!is_unary_op(bc[pc].subop))
-                        RD = call(object_operator.func, RS1, {RS1,RS2});
-                else
-                        RD = call(object_operator.func,RS1,{RS1});
-                return;
+        using namespace IL::Math;
+        if(RS1.type==Type::htable){
+                auto op  = overload_operators[bc[pc].subop];
+                auto object_operator = RS1.t->get(op);
+                if(object_operator.type==Type::fun_t){
+                        if(!is_unary_op(bc[pc].subop))
+                                RD = call(object_operator.func, RS1, {RS1,RS2});
+                        else
+                                RD = call(object_operator.func,RS1,{RS1});
+                        return;
+                }
+        }else if(RS1.type==Type::userdata){
+                auto op  = overload_operators[bc[pc].subop];
+                        auto object_operator = RS1.u->get(op,this);
+                if(object_operator.type==Type::fun_t){
+                        if(!is_unary_op(bc[pc].subop))
+                                RD = call(object_operator.func, RS1, {RS2});
+                        else
+                                RD = call(object_operator.func,RS1);
+                        return;
+                }
         }
-      }else if(RS1.type==Type::userdata){
-        auto op  = overload_operators[bc[pc].subop];
-        auto object_operator = RS1.u->get(op,this);
-        if(object_operator.type==Type::fun_t){
-                if(!is_unary_op(bc[pc].subop))
-                        RD = call(object_operator.func, RS1, {RS2});
-                else
-                        RD = call(object_operator.func,RS1);
-                return;
+        switch (bc[pc].subop){
+        	case add: RD = RS1+RS2; break;
+        	case sub: RD = RS1-(RS2); break;
+        	case mul: RD = RS1*RS2; break;
+        	case div: RD = RS1/RS2; break;
+        	case mod: RD = RS1%RS2; break;
+        	case log_and: RD = RS1&&RS2; break;
+        	case log_or: RD = RS1||RS2; break;
+        	case log_eq: RD = RS1==RS2; break;
+        	case log_ne: RD = RS1!=RS2; break;
+        	case log_lt: RD = RS1<RS2; break;
+        	case log_le: RD = RS1<=RS2; break;
+        	case log_gt: RD = RS1>RS2; break;
+        	case log_ge: RD = RS1>=RS2; break;
+        	case log_not: RD = !(RS1); break;
+        	case neg: RD = -(RS1); break;
+        	case inc: RD = Value(1.0)+RD; break;
+        	case dec: RD = Value(-1.0)+RD; break;
         }
-      }
-      switch (bc[pc].subop){
-	case add: RD = RS1+RS2; break;
-	case sub: RD = RS1-(RS2); break;
-	case mul: RD = RS1*RS2; break;
-	case div: RD = RS1/RS2; break;
-	case mod: RD = RS1%RS2; break;
-	case log_and: RD = RS1&&RS2; break;
-	case log_or: RD = RS1||RS2; break;
-	case log_eq: RD = RS1==RS2; break;
-	case log_ne: RD = RS1!=RS2; break;
-	case log_lt: RD = RS1<RS2; break;
-	case log_le: RD = RS1<=RS2; break;
-	case log_gt: RD = RS1>RS2; break;
-	case log_ge: RD = RS1>=RS2; break;
-	case log_not: RD = !(RS1); break;
-	case neg: RD = -(RS1); break;
-	case inc: RD = Value(1.0)+RD; break;
-	case dec: RD = Value(-1.0)+RD; break;
-      }
     }
+
     inline void concat(){
-      std::stringstream ss;
-      tostr(RS1,ss);
-      tostr(RS2,ss);
-      RD=Value(gc,new String(ss.str().c_str()));
+        std::stringstream ss;
+        tostr(RS1,ss);
+        tostr(RS2,ss);
+        RD=Value(gc,new String(ss.str().c_str()));
     }
+
     inline void setProperty(){
         if(RD.type == Type::array && RS1.type==Type::number){
 	       RD.a->set(((uint64_t)RS1.f),RS2);
@@ -531,6 +542,7 @@ namespace nls{
 	       RD=RS1.t->get(ss.str());
         }
     }
+
     inline void jcc(){
         if(bc[pc].subop==IL::Jump::jmp){
 	        pc = bc[pc].offset;
@@ -547,6 +559,7 @@ namespace nls{
     inline void set_try(){
         tryAddr.push_back(bc[pc].offset);
     }
+
     Value StackTrace(){
 
 #ifdef DEBUG_INFO
@@ -924,18 +937,17 @@ public:
         	        }
                 	switch(bc[pc].op){
                                 case IL::hlt:hlt();break;
-                                case IL::nop:nop();break;
+                                case IL::nop:break;
                         	case IL::pushNewObj:pushNewObj();break;
                         	case IL::pop:pop();break;
                         	case IL::top:top();break;
                         	case IL::clearArgs:clearArgs();break;
-                        	case IL::pushArg:pushArg();break;
+                        	case IL::pushArg:push();break;
                         	case IL::objAlloc:objAlloc();break;
                         	case IL::print:print();break;
                         	case IL::ret:ret();break;
                         	case IL::getArg:getArg();break;
                         	case IL::mov:mov();break;
-                        	case IL::tostr:tostr();break;
                         	case IL::call:call();break;
                         	case IL::math_op:math_op();break;
                         	case IL::concat:concat();break;
