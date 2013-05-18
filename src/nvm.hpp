@@ -17,6 +17,7 @@
 #include "ngc.hpp"
 #include "nvalue.hpp"
 #include "ncodegen.hpp"
+#include "nlogger.hpp"
 #include <functional>
 #ifndef PROTOTYPES
 #define PROTOTYPES 1
@@ -583,30 +584,36 @@ namespace nls{
                 return;
         }else{
 	        std::cerr<<"Unhandled exception:\n";
-                nexception.print(std::cerr);
+                std::stringstream ss;
+                tostr(nexception,ss);
+                std::cerr<<ss.str();
                 std::cerr<<"\n";
         }
+        std::stringstream ss;
+        ss<<("Unhandled exception\n");
+        tostr(nexception,ss);
         exitcode = (uint)-1;
 	if(Addr.empty()==false)
-	  std::cerr<<"Instruction address stack trace:\n";
+	  ss<<"\nInstruction address stack trace:\n";
 	for(auto&x:Addr){
-	  std::cerr<<"callee:"<<x;
+	  ss<<"callee:"<<x<<'\n';
 #ifdef DEBUG_INFO
           if(__funcs.empty())
 #endif
-                std::cerr<<"\n";
+                ss<<"\n";
 #ifdef DEBUG_INFO
           else{
-                std::cerr<<" in "<<__funcs.back()<<'\n';
+                ss<<" in "<<__funcs.back()<<'\n';
 	        __funcs.pop_back();
           }
 #endif
         }
-	std::cerr<<"Instruction:"<<pc<<'\n'
+	ss<<"Instruction:"<<pc<<'\n'
 	<<bc[pc].op<<' '<<(uint)bc[pc].subop<<' '<<bc[pc].dest
 	<<' '<<bc[pc].src1<<' '<<bc[pc].src2<<'\n';
 
-	std::cerr<<"Excecution aborted\n";
+	ss<<"Excecution aborted\n";
+        NLogger::log(ss.str());
 	return;
       }
       pc = tryAddr.back();

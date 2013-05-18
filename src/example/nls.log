@@ -1,0 +1,17 @@
+NLogger::[1]:	Unhandled exception
+UserException:test.
+Instruction address stack trace:
+callee:2798
+ in test
+callee:2797
+ in obj.call
+callee:2790
+ in tre
+callee:2778
+ in oooobject.1234567kjhnd
+callee:2766
+
+Instruction:2757
+14 0 1720 0 0
+Excecution aborted
+

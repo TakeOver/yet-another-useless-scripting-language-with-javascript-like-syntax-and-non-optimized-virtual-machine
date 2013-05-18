@@ -40,3 +40,18 @@ var str = "1234567890"
 print str
 print str.substr(1,9);
 print str.substr(0,1);
+function test(){
+throw new UserException("test.")
+}
+var obj = {
+        call = function(){
+                test();
+        }
+}
+var tre = function(){
+        obj.call();
+}
+var oooobject = {
+        "1234567kjhnd" = |x|tre();
+}
+oooobject["1234567kjhnd"]();
