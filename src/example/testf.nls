@@ -33,3 +33,6 @@ for(var i in obj){
 
 print sys.argc
 print sys.argv
+var arr = [1,2,3,4,5]
+for(var i in arr)
+        print i;

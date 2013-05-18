@@ -107,40 +107,32 @@ String.valid_json =|a|JSON.valid(this);
 std.eval = |str| System.__native__unsafe__evaluate("("..str..")");
 
 const __iter = |self|{
-    __self: self,
-    is_obj: typeof self == "object",
-    is_arr: typeof self == "array",
-    __current: 0,
-    key:null,
-    value:null,
-    uditer:null,
-    __call: function(){
-      if(@is_obj){
-                if(@uditer==null){
-                        @uditer = sys.__obj__iter(self);
-                        delete @__self;
-                        delete @__current;
-                        delete @is_arr;
+        is_obj: typeof self == "object",
+        is_arr: typeof self == "array",
+        key:null,
+        value:null,
+        uditer:null,
+        __call: function(){
+                if(@is_obj || @is_arr){
+                        if(@uditer==null){
+                                if(@is_obj)
+                                        @uditer = sys.__obj__iter(self);
+                                else
+                                        @uditer = sys.__arr__iter(self);
+                        }
+                        if(!@uditer.valid()){
+                                return null;
+                        }
+                        var obj = @uditer.next();
+                        @key = obj.key;
+                        @value = obj.value;
+                        if(@key == "prototype")
+                                return this();
+                        return this;
                 }
-                if(!@uditer.valid()){
-                        return null;
-                }
-                var obj = @uditer.next();
-                @key = obj.key;
-                @value = obj.value;
-                if(@key == "prototype")
-                        return this();
-      }else if(@is_arr){
-                if(this.__current>=#this.__self)
-                        return null;
-	       this.value = this.__self[this.__current];
-	       this.key = this.__current;
-	       ++this.__current;
-      }else
                 return null;
-      return this;
-    }
-  }();
+        }
+}();
 
 const InputStream = function(path,disp){
   this.__path = path;
@@ -201,7 +193,7 @@ const Math = {
   log: |x,y| @ln(y)/@ln(x)
 };
 Array.push = function(x){ this[this.length()]=x;}
-//\brief alert works like print -> output 'wat' and puts newline character
+
 const alert = function(wat){
   print wat;
 }
@@ -464,37 +456,37 @@ class Ref extends Object{
                 return @mutable;
         }
         function __add(x,y){
-                return new Ref(x["::__ref"] + (y["::__ref"] || y));
+                return new Ref(x["::__ref"] + (y["::__ref"] ));
         }
         function __sub(x,y){
-                return new Ref(x["::__ref"] - (y["::__ref"] || y));
+                return new Ref(x["::__ref"] - (y["::__ref"] ));
         }
         function __mul(x,y){
-                return new Ref(x["::__ref"] * (y["::__ref"] || y));
+                return new Ref(x["::__ref"] * (y["::__ref"] ));
         }
         function __div(x,y){
-                return new Ref(x["::__ref"] / (y["::__ref"] || y));
+                return new Ref(x["::__ref"] / (y["::__ref"] ));
         }
         function __mod(x,y){
-                return new Ref(x["::__ref"] % (y["::__ref"] || y));
+                return new Ref(x["::__ref"] % (y["::__ref"] ));
         }
         function __less(x,y){
-                return new Ref(x["::__ref"] < (y["::__ref"] || y));
+                return new Ref(x["::__ref"] < (y["::__ref"] ));
         }
         function __equal(x,y){
-                return new Ref(x["::__ref"] == (y["::__ref"] || y));
+                return new Ref(x["::__ref"] == (y["::__ref"] ));
         }
         function __nonequal(x,y){
-                return new Ref(x["::__ref"] != (y["::__ref"] || y));
+                return new Ref(x["::__ref"] != (y["::__ref"] ));
         }
         function __great(x,y){
-                return new Ref(x["::__ref"] > (y["::__ref"] || y));
+                return new Ref(x["::__ref"] > (y["::__ref"] ));
         }
         function __great_eq(x,y){
-                return new Ref(x["::__ref"] >= (y["::__ref"] || y));
+                return new Ref(x["::__ref"] >= (y["::__ref"] ));
         }
         function __less_eq(x,y){
-                return new Ref(x["::__ref"] <= (y["::__ref"] || y));
+                return new Ref(x["::__ref"] <= (y["::__ref"] ));
         }
         function __not(x){
                 return new Ref(!x["::__ref"]);

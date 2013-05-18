@@ -26,14 +26,9 @@ namespace nls{
                                 if( val.type!=Type::htable){
                                         this->current = iter(),
                                         this->end = this->current;
-                                        std::cerr<<"Missed\n";
-                                        val.print(std::cerr);
                                 }else{
                                         this->Construct(val.t->table);
                                 }
-                        }
-                        std::string toString(){
-                                return "{HTableIterator}";
                         }
         };
         class ArrayIterator{
@@ -46,8 +41,8 @@ namespace nls{
                                 current = arr.begin();
                         }
                         ~ArrayIterator(){}
-                        Value next(){
-                                return (current++)->second;
+                        std::pair<uint64_t, Value> next(){
+                                return *(current++);
                         }
                         bool valid(){
                                 return current != end;
@@ -64,6 +59,12 @@ namespace nls{
         Value MarshalType(GC*gc,std::pair<std::string, Value> it){
                 auto obj = new Table<Value>();
                 obj->set("key",Value(gc,new String(it.first)));
+                obj->set("value", it.second);
+                return Value(gc,obj);
+        }
+        Value MarshalType(GC*gc,std::pair<uint64_t, Value> it){
+                auto obj = new Table<Value>();
+                obj->set( "key" , Value( static_cast < long double > ( it.first ) ) );
                 obj->set("value", it.second);
                 return Value(gc,obj);
         }

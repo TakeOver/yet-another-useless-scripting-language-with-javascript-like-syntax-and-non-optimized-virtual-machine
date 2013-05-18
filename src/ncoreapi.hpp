@@ -287,16 +287,24 @@ namespace nls{
     inline void LoadLibComplex(){
         //!TODO
     }
-    inline void LoadAllLibs(){
-        LoadLibRegex();
-        LoadLibMath();
+    inline void LoadIterators(){
         bindSysClass<HTableIterator>("__obj__iter", {
                 {"construct", def(&HTableIterator::create)},
                 {"next",def(&HTableIterator::next)},
                 {"valid",def(&HTableIterator::valid)},
-                {"__inc",def(&HTableIterator::next)},
-                {"__tostr",def(&HTableIterator::toString)}
+                {"__inc",def(&HTableIterator::next)}
         });
+        bindSysClass<ArrayIterator>("__arr__iter", {
+                {"construct", def(&ArrayIterator::create)},
+                {"next",def(&ArrayIterator::next)},
+                {"valid",def(&ArrayIterator::valid)},
+                {"__inc",def(&ArrayIterator::next)}
+        });
+    }
+    inline void LoadAllLibs(){
+        LoadLibRegex();
+        LoadLibMath();
+        LoadIterators();
     }
     inline void InitVM(){
       assert(vm!=nullptr);
