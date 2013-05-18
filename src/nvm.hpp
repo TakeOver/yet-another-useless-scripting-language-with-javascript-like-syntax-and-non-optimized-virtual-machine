@@ -868,7 +868,9 @@ public:
                 assert(R[1].type == Type::htable);
                 R[1].t->set(name,Value(gc,new Function(addr)));
         }
-
+        inline void SetToSystem(std::string name,Value val){
+                R[1].t->set(name,val);
+        }
         VirtualMachine():registers(0){}
 
         ~VirtualMachine(){
