@@ -111,6 +111,35 @@ String.valid_json =|a|JSON.valid(this);
 
 std.eval = |str| System.__native__unsafe__evaluate("("..str..")");
 
+class Exception extends Object {
+        var _what;
+        var line ;
+        var callee;
+        var additionalinfo;
+        construct(what,line,callee,additionalinfo){
+                @_what=what;
+                @line = line;
+                @callee = callee;
+                @additionalinfo=additionalinfo;
+        }
+        function what(){
+                var str = @_what;
+                if(line!=null)
+                        str=str.."\nat line:"..@line;
+                if(callee!=null)
+                        str=str.."\ncallee:"..@callee;
+                if(additionalinfo!=null)
+                        str=str.."\nadditional:"..@additionalinfo;
+                return str;
+        }
+        function log(){
+                std.log(std.log.Warning,@what());
+        }
+        function __tostr(){
+                return @what();
+        }
+}
+
 const __iter = |self|{
         is_obj: typeof self == "object",
         is_arr: typeof self == "array",
@@ -136,6 +165,9 @@ const __iter = |self|{
                         return this;
                 }
                 return null;
+        },
+        "__del:uditer": function(){
+                throw new Exception("Cannot apply '__del:uditer' in iterator.");
         }
 }();
 
@@ -331,34 +363,6 @@ operator as 150(x,y){
         return res;
 }
 
-class Exception extends Object {
-        var _what;
-        var line ;
-        var callee;
-        var additionalinfo;
-        construct(what,line,callee,additionalinfo){
-                @_what=what;
-                @line = line;
-                @callee = callee;
-                @additionalinfo=additionalinfo;
-        }
-        function what(){
-                var str = @_what;
-                if(line!=null)
-                        str=str.."\nat line:"..@line;
-                if(callee!=null)
-                        str=str.."\ncallee:"..@callee;
-                if(additionalinfo!=null)
-                        str=str.."\nadditional:"..@additionalinfo;
-                return str;
-        }
-        function log(){
-                std.log(std.log.Warning,@what());
-        }
-        function __tostr(){
-                return @what();
-        }
-}
 operator typeid 150(x){
         if(typeof x == "object")
                 return x._F || Object;

@@ -41,7 +41,11 @@ print str
 print str.substr(1,9);
 print str.substr(0,1);
 function test(){
-throw new UserException("test.")
+        var obj = $TestClass(1);
+        var _obj = {}
+        _obj.prop = obj.__tostr;
+        print _obj;
+        throw new UserException("function test()",)
 }
 var obj = {
         call = function(){
