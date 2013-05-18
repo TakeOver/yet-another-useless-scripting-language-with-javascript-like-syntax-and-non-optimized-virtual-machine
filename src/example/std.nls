@@ -2,6 +2,13 @@
 const std = {}
 const __typeof = System.__native__typeof;
 
+define $ = Userdata.
+alias and = &&
+alias or = ||
+const _ = null; // since compiler don't report assign to contant as error(simply ignoring assign), this would be nice
+alias not = !
+alias nil = null
+alias sys = System
 operator typeof 150(x){
         return __typeof(x);
 }
@@ -100,28 +107,37 @@ String.valid_json =|a|JSON.valid(this);
 std.eval = |str| System.__native__unsafe__evaluate("("..str..")");
 
 const __iter = |self|{
-    __self :  self,
+    __self: self,
+    is_obj: typeof self == "object",
+    is_arr: typeof self == "array",
     __current: 0,
-    key:"",
-    value:{},
+    key:null,
+    value:null,
+    uditer:null,
     __call: function(){
-      if(this.__current>=#this.__self)
-	return null;
-      if(typeof(this.__self)=="object"){
-	var next = System.__native__next(this.__self,this.__current);
-	if(next == null)
-	  return null;
-	++this.__current;
-	this.value = this.__self[next];
-	this.key = next;
-	if(this.key == "prototype")
-	  return this();
-      }else if(typeof(this.__self) == "array"){
-	this.value = this.__self[this.__current];
-	this.key = this.__current;
-	++this.__current;
-      }else return null;
-
+      if(@is_obj){
+                if(@uditer==null){
+                        @uditer = sys.__obj__iter(self);
+                        delete @__self;
+                        delete @__current;
+                        delete @is_arr;
+                }
+                if(!@uditer.valid()){
+                        return null;
+                }
+                var obj = @uditer.next();
+                @key = obj.key;
+                @value = obj.value;
+                if(@key == "prototype")
+                        return this();
+      }else if(@is_arr){
+                if(this.__current>=#this.__self)
+                        return null;
+	       this.value = this.__self[this.__current];
+	       this.key = this.__current;
+	       ++this.__current;
+      }else
+                return null;
       return this;
     }
   }();
@@ -282,13 +298,6 @@ Array.Clone = function(){
                 res[i.key]=i.value;
         return res;
 }
-define $ = Userdata.
-alias and = &&
-alias or = ||
-const _ = null; // since compiler don't report assign to contant as error(simply ignoring assign), this would be nice
-alias not = !
-alias nil = null
-alias sys = System
 const __instanceof = function(x,y){
         if(x._F == y)
                 return true;

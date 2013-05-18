@@ -26,3 +26,7 @@ print !cl;
 print ++cl;
 cl.a = 0;
 print !cl
+var obj = {"a":1,"b":2,"c":3};
+for(var i in obj){
+        print i;
+}

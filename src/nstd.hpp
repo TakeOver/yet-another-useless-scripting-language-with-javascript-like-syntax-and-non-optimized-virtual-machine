@@ -9,7 +9,6 @@ namespace nls{
                 api->bindFunction("__native__substr",str_substr,false);\
                 api->bindFunction("__native__unsafe__evaluate",__eval,false);\
                 api->bindFunction("__native__safe__json__parse",__json_parse,false);\
-                api->bindFunction("__native__next",__iterator_next,false);\
                 api->bindFunction("__native__typeof",__native__typeof,false);\
                 api->bindFunction("__init__safe__istream",__init_safe_file_istream,false);\
                 api->bindFunction("__native__write__to__file",__write__to__file,false);\
@@ -132,27 +131,6 @@ void __json_parse(VirtualMachine *vm,Value*){
     delete rh;
     delete par;
 }
-void __iterator_next(VirtualMachine *vm,Value*){
-      auto obj = vm->GetArg();
-      auto pos = vm->GetArg();
-      if(obj.type!=Type::htable){
-            vm->Push(Value());
-            return;
-    }
-    if(pos.type!=Type::number){
-            vm->Push(Value());
-            return;
-    }
-    if(pos.f>=obj.t->table.size()){
-            vm->Push(Value());
-            return;
-    }
-    auto _it = obj.t->table.begin();
-    for(uint i=0;i<(uint)pos.f;++i) ++_it;
-      auto res = Value(vm->getGC(),new String((const char*)_it->first.c_str()));
-vm->Push(res);
-}
-
 void __native__typeof(VirtualMachine *vm,Value*){
       auto val = vm->GetArg();
       const char* ptr;

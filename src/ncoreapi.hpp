@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include "niterator.hpp"
 
 namespace nls{
   class NlsApi{
@@ -273,6 +274,13 @@ namespace nls{
     inline void LoadAllLibs(){
         LoadLibRegex();
         LoadLibMath();
+        bindSysClass<HTableIterator>("__obj__iter", {
+                {"construct", def(&HTableIterator::create)},
+                {"next",def(&HTableIterator::next)},
+                {"valid",def(&HTableIterator::valid)},
+                {"__inc",def(&HTableIterator::next)},
+                {"__tostr",def(&HTableIterator::toString)}
+        });
     }
     inline void InitVM(){
       assert(vm!=nullptr);
