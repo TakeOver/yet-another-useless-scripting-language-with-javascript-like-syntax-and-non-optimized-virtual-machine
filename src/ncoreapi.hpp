@@ -12,6 +12,19 @@
 #include "niterator.hpp"
 
 namespace nls{
+
+        std::string readLine(){
+                std::string line;
+                std::getline(std::cin,line);
+                return line;
+        }
+        void writeLine(Value val){
+                val.print(std::cout);
+        }
+        std::string substr(std::string str, int64_t start,int64_t end){
+                return str.substr(start,end);
+        }
+
   class NlsApi{
   private:
         BasicBlock *bb;
@@ -281,6 +294,11 @@ namespace nls{
         BindToSystem("__native__asin", asinl);
         LoadLibComplex();
     }
+    inline void LoadIOLib(){
+                BindToSystem("__native__write__stdout",writeLine);
+                BindToSystem("__native__read__stdin",readLine);
+                BindToSystem("__native__substr",substr);\
+    }
     inline void LoadLibRegex(){
         bindSysClass< Regex >("Regex", {
                 {"apply",def(&Regex::Apply)},
@@ -309,14 +327,13 @@ namespace nls{
         LoadLibRegex();
         LoadLibMath();
         LoadIterators();
+        LoadIOLib();
     }
     inline void InitVM(){
       assert(vm!=nullptr);
       assert(bb!=nullptr);
       vm->SetBasicBlock(bb);
-      #define api this
-      BINDALL;
-      #undef api
+      BINDALL(this);
       LoadAllLibs();
     }
     inline void SetMainArgs(int &argc, char const** &argv){
@@ -328,9 +345,7 @@ namespace nls{
     inline void InitVM(const char*path){
       assert(vm!=nullptr);
       vm->LoadAssembly(path);
-      #define api this
-      BINDALL;
-      #undef api
+      BINDALL(this);
       LoadAllLibs();
     }
 

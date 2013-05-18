@@ -66,14 +66,19 @@ String.__call=|x|x||String.Empty
 Function.__call=function(x){
         if(x==null)
                 return function(){}
-        @__call = x
-        return this;
+        return x;
 }
 Number.times = function(x){
   for(var i=0;i<this;++i)
     x(i);
 }
-String.substr = System.__native__substr;
+String.substr = function(start,end){
+        if(start>end || start<0 || start+end>#this || end<0)
+                return null;
+        if(end ==0)
+                return String.Empty;
+        return sys.__native__substr(this,start,end);
+}
 String.charAt = |a| this.substr(a,1);
 
 Number.to_str = || ""..this;
