@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <map>
+#include <functional>
 
 #include <cstdio>
 #include <cstdlib>
@@ -18,7 +19,7 @@
 #include "nvalue.hpp"
 #include "ncodegen.hpp"
 #include "nlogger.hpp"
-#include <functional>
+
 #ifndef GC_CYCLO
 #define GC_CYCLO 1000
 #endif
@@ -27,7 +28,6 @@ namespace nls{
 
   class VirtualMachine{
   public:
-   // typedef void(*native_func_t)(VirtualMachine* /* !@p vm*/,Value* /*! @p self*/);
         typedef std::function<void(VirtualMachine*,Value*)> native_func_t;
   private:
 #define RD R[bc[pc].dest]
@@ -51,45 +51,46 @@ namespace nls{
 #endif
 
 #ifdef EXPERIMENTAL_GC_ROOT
-    std::vector<uint16_t> gcroots;
-    uint16_t rootsCount;
+        std::vector<uint16_t> gcroots;
+        uint16_t rootsCount;
 #endif
 
-    std::map<uint8_t,Table<Value>*> basic_prototypes;
+        std::map<uint8_t,Table<Value>*> basic_prototypes;
 
-    GC* gc = nullptr;
+        GC* gc = nullptr;
 
         inline Table<Value>* _getPrototypeOf(uint8_t _t){
                 return basic_prototypes[_t];
         }
 
     inline void tostr(Value&val, std::stringstream& ss){
-      if(val.type == Type::htable){
-	auto _f = val.t->get("__tostr");
-	if(_f.type == Type::fun_t){
-                call(_f.func, val).print(ss);
-                return;
-	}
-      }else if(val.type==Type::userdata){
-        auto _fc = val.u->get("__tostr",this);
-        if(_fc.type==Type::fun_t){
-                call(_fc.func,val).print(ss);
-                return;
+        if(val.type == Type::htable){
+	       auto _f = val.t->get("__tostr");
+	       if(_f.type == Type::fun_t){
+                        call(_f.func, val).print(ss);
+                        return;
+	        }
+        }else if(val.type==Type::userdata){
+                auto _fc = val.u->get("__tostr",this);
+                if(_fc.type==Type::fun_t){
+                        call(_fc.func,val).print(ss);
+                        return;
+                }
         }
-      }
-      val.print(ss);
+        val.print(ss);
     }
+
     inline void createArgsArray(){
         auto count = Args.back();
         auto reg = bc[pc].dest;
         auto off = S.size()-1;
         R[reg]= Value(gc,new Array<Value>());
-        for (int i = 0; i < count; ++i)
-        {
+        for (int i = 0; i < count; ++i){
                 R[reg].a->set(i, S[off-i]);
         }
 
     }
+
     inline void packArg(){
         Array<Value>* arr = new Array<Value>();
         uint idx = 0;
@@ -99,6 +100,7 @@ namespace nls{
         }
         RD = Value(gc,arr);
     }
+
     inline void unpackArg(){
         if(RD.type != Type::array){
                 S.push_back(RD);
@@ -113,65 +115,73 @@ namespace nls{
     }
 
     inline void delProp(){
-      if(RD.type!=Type::htable && RD.type!=Type::array && RD.type!=Type::userdata)
-	return;
-      std::stringstream s;
-      if(RD.type==Type::userdata){
-        tostr(RS1,s);
-        RD.u->del(s.str(), this);
-        return;
-      }
-      if(RD.type==Type::htable){
-	tostr(RS1,s);
+        if(RD.type!=Type::htable && RD.type!=Type::array && RD.type!=Type::userdata)
+	       return;
+        std::stringstream s;
+        if(RD.type==Type::userdata){
+                tostr(RS1,s);
+                RD.u->del(s.str(), this);
+                return;
+        }
+        if(RD.type==Type::htable){
+	       tostr(RS1,s);
 
-        auto __del = RD.t->get("__del:"+s.str());
-        if(__del.type==Type::fun_t){
-                call(__del.func,RD);
-                return;
+                auto __del = RD.t->get("__del:"+s.str());
+
+                if(__del.type==Type::fun_t){
+                        call(__del.func,RD);
+                        return;
+                }
+
+                __del = RD.t->get("__del");
+
+                if(__del.type==Type::fun_t){
+                        call(__del.func,RD,{Value(gc,new String(s.str()))});
+                        return;
+                }
+
+        	auto iter = RD.t->table.find(s.str());
+        	if(iter == RD.t->table.end())
+        	       return;
+
+        	RD.t->table.erase(iter);
+
+        }else{
+        	if(RS1.type!=Type::number){
+        	        tostr(RS1,s);
+                	auto iter = _getPrototypeOf(Type::array)->table.find(s.str());
+                	if(iter == _getPrototypeOf(Type::array)->table.end())
+        	                return;
+        	        _getPrototypeOf(Type::array)->table.erase(iter);
+        	}else{
+        	        auto iter = RD.a->arr.find((uint64_t)RS1.f);
+        	        if(RD.a->arr.end()==iter)
+        	               return;
+        	        RD.a->arr.erase(iter);
+        	}
         }
-        __del = RD.t->get("__del");
-        if(__del.type==Type::fun_t){
-                call(__del.func,RD,{Value(gc,new String(s.str()))});
-                return;
-        }
-	auto iter = RD.t->table.find(s.str());
-	if(iter == RD.t->table.end())
-	  return;
-	RD.t->table.erase(iter);
-      }else{
-	if(RS1.type!=Type::number){
-	  tostr(RS1,s);
-	  auto iter = _getPrototypeOf(Type::array)->table.find(s.str());
-	  if(iter == _getPrototypeOf(Type::array)->table.end())
-	    return;
-	  _getPrototypeOf(Type::array)->table.erase(iter);
-	}else{
-	  auto iter = RD.a->arr.find((uint64_t)RS1.f);
-	  if(RD.a->arr.end()==iter)
-	    return;
-	  RD.a->arr.erase(iter);
-	}
-      }
+
     }
+
     inline void StopTheWorld(){
 
-      #ifdef EXPERIMENTAL_GC_ROOT
+#ifdef EXPERIMENTAL_GC_ROOT
 
-      for (int i = 0; i < rootsCount; ++i){
-              assert(gcroots[i]<=registers);
-              R[gcroots[i]].markAll(gc);
-      }
+        for (int i = 0; i < rootsCount; ++i){
+                assert(gcroots[i]<=registers);
+                R[gcroots[i]].markAll(gc);
+        }
 
-      #else
+#else
 
-      for (int i = 0; i <= registers; ++i){
+        for (int i = 0; i <= registers; ++i){
                 R[i].markAll(gc);
-      }
+        }
 
-      #endif
+#endif
 
-      for(auto&x:S)
-	x.markAll(gc);
+        for(auto&x:S)
+	       x.markAll(gc);
 	for(auto&x:basic_prototypes){
 	        if(gc->marked(x.second))
 	               continue;
@@ -195,54 +205,61 @@ namespace nls{
                         return;
                 }
         }
-      RD=RS1;
-      if(RS1.type==Type::str)
-	RD.s=RD.s->Clone();
+        RD=RS1;
+        if(RS1.type==Type::str)
+	       RD.s=RD.s->Clone();
     }
+
     inline void objAlloc(){
-      assert(bc[pc].dest<=registers);
-      RD=Value(gc,new Table<Value>());
-      RD.t->set("prototype",Value(gc,_getPrototypeOf(Type::htable)));
+        assert(bc[pc].dest<=registers);
+        RD=Value(gc,new Table<Value>());
+        RD.t->set("prototype",Value(gc,_getPrototypeOf(Type::htable)));
     }
+
     inline void arrAlloc(){
-      RD=Value(gc,new Array<Value>());
+        RD=Value(gc,new Array<Value>());
     }
+
     inline void hlt(){
-      exitcode = 1; //
+        exitcode = 1; //
     }
+
     inline void getArg(){
-      if(Args.empty() || Args.back()==0)
-	RD=Value(0,Type::null);
-      else {
-	pop();
-	Args.back()-=1;
-      }
+        if(Args.empty() || Args.back()==0){
+	       RD=Value(0,Type::null);
+        } else {
+	       pop();
+	       Args.back()-=1;
+        }
     }
+
     inline void length(){
-      if(RS1.type== Type::htable){
+        if(RS1.type== Type::htable){
                 auto _fc = RS1.t->get("__len");
                 if(_fc.type==Type::fun_t){
                         RD = call(_fc.func,RS1);
                         return;
                 }
 	        RD=Value(RS1.t->table.size()+.0);
-      }else if (RS1.type==Type::str){
+        }else if (RS1.type==Type::str){
 	        RD=Value(RS1.s->len+.0);
-      }else if(RS1.type==Type::array){
-	if(RS1.a->arr.size()==0)
-	        RD=Value(0.0);
-	else
-	        RD=Value(RS1.a->arr.rbegin()->first+1.0);
-      }else if(RS1.type==Type::userdata){
+        }else if(RS1.type==Type::array){
+	        if(RS1.a->arr.size()==0){
+	               RD=Value(0.0);
+                }else{
+	               RD=Value(RS1.a->arr.rbegin()->first+1.0);
+               }
+        }else if(RS1.type==Type::userdata){
                 auto _fc = RS1.u->get("__len",this);
                 if(_fc.type==Type::fun_t){
                         RD = call(_fc.func,RS1);
                         return;
                 }
-      }else{
+        }else{
                 RD=Value(1.0);
-      }
+        }
     }
+
     inline void clearArgs(){
         if(Args.empty())
                 return;
@@ -255,29 +272,29 @@ namespace nls{
     }
 
     inline void dup(){
-      S.push_back(S.back());
+        S.push_back(S.back());
     }
 
     inline void pushNewObj(){
-      S.push_back(Value(gc,new Table<Value>()));
+        S.push_back(Value(gc,new Table<Value>()));
     }
 
     inline void push(){
-      assert(bc[pc].dest<=registers);
-      S.push_back(RD);
+        assert(bc[pc].dest<=registers);
+        S.push_back(RD);
     }
 
     inline void pop(){
-      assert(bc[pc].dest<=registers);
-      assert(!S.empty());
-      RD=S.back();
-      S.pop_back();
+        assert(bc[pc].dest<=registers);
+        assert(!S.empty());
+        RD=S.back();
+        S.pop_back();
     }
 
     inline void top(){
-      assert(bc[pc].dest<=registers);
-      assert(!S.empty());
-      RD=S.back();
+        assert(bc[pc].dest<=registers);
+        assert(!S.empty());
+        RD=S.back();
     }
 
 
@@ -297,10 +314,14 @@ namespace nls{
                 pc = bcsize-2;
         }
         RS2.type = Type::null;
+
 #ifdef DEBUG_INFO
+
         while(!__funcs.empty()&&__funcs.size()>=Addr.size())
         __funcs.pop_back();
+
 #endif
+
     }
 
     inline void nativeCall(Function*func){
@@ -401,6 +422,7 @@ namespace nls{
     inline void createFunc(){
         RD=Value(gc,new Function(bc[pc].src1));
     }
+
     std::map<uint8_t, std::string> overload_operators = {
         {IL::Math::add,"__add"},
         {IL::Math::mul,"__mul"},
@@ -647,10 +669,10 @@ namespace nls{
         S.push_back(nexception);
     }
 
-    inline void pop_try(){
-        assert(tryAddr.empty()==false);
-        tryAddr.pop_back();
-    }
+        inline void pop_try(){
+                assert(tryAddr.empty()==false);
+                tryAddr.pop_back();
+        }
 
         bool using_mapping = false;
         const char* fdata;
