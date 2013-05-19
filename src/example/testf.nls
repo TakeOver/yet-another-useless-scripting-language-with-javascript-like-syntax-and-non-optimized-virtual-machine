@@ -52,8 +52,9 @@ print sb;
 var sbs = sb.toString();
 print typeof sbs;
 print typeof sb;
-var testfile = sys.FileStreamWriter("testfile.txt");
-testfile.write("Hello, World!\n");
-testfile = sys.FileStreamReader("testfile.txt");
-print "\n\n\neof:\t"..testfile.eof()
-print testfile.read()
+var int = $Integer(123)
+print int
+var int2 =$Integer(3321)
+print int2
+print int+int2;
+print int*int2

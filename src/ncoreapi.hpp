@@ -12,6 +12,8 @@
 #include "niterator.hpp"
 #include <complex>
 #include "nstream.hpp"
+#include "ninteger.hpp"
+
 namespace nls{
 
         void write2File(std::string path,Value val){
@@ -351,6 +353,7 @@ namespace nls{
                         BindToSystem("__native__read__stdin",readLine);
                         BindToSystem("__native__substr",substr);
                         BindToSystem("__native__write__to__file",write2File);
+
                         bindSysClass("StringBuilder", StringBuilder::create, {
                                 {"__get",def(&StringBuilder::__get)},
                                 {"append",def(&StringBuilder::Append)},
@@ -380,7 +383,22 @@ namespace nls{
                                 {"indexOf",def(&Regex::IndexOf)},
                                 {"exists",def(&Regex::Exist)}});
                 }
-
+                inline void LoadLibInteger(){
+                        bindClass("Integer", Integer::create, {
+                                {"__add",def(&Integer::add)},
+                                {"__mul",def(&Integer::mul)},
+                                {"__div",def(&Integer::div)},
+                                {"__mod",def(&Integer::mod)},
+                                {"__neg",def(&Integer::neg)},
+                                {"__less",def(&Integer::less)},
+                                {"__great",def(&Integer::great)},
+                                {"__equal",def(&Integer::equal)},
+                                {"__less_eq",def(&Integer::less)},
+                                {"__great_eq",def(&Integer::great_eq)},
+                                {"__notequal",def(&Integer::notequal)},
+                                {"__tostr",def(&Integer::tostr)}
+                        });
+                }
                 inline void LoadLibComplex(){
                         using Complex = std::complex<long double>;
                         bindSysClass<Complex>(
@@ -436,6 +454,7 @@ namespace nls{
                         LoadLibMath();
                         LoadIterators();
                         LoadIOLib();
+                        LoadLibInteger();
                 }
 
                 inline void InitVM(){
