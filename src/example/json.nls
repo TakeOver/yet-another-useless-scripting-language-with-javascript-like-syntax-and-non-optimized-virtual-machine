@@ -1,0 +1,21 @@
+require sys
+
+const JSON ={
+  parse :|str| System.__native__safe__json__parse(str);
+
+  valid: function (str){
+    if(typeof(str)=="string")
+      return (typeof(this.parse(str))=="object");
+    if(typeof(str)=="object")
+      return true;
+    return false;
+  }
+  to_str:function(obj){
+        if( typeof obj.Seriallize == "function")
+                return obj.Seriallize();
+        return obj.to_str();
+  }
+}
+
+String.to_obj = |a| JSON.parse(this);
+String.valid_json =|a|JSON.valid(this);

@@ -298,7 +298,7 @@ namespace nls{
                 _getnxtk(preprocess);
                 return;
         }
-        while(is_alias(tok_str)){
+        while(preprocess && is_alias(tok_str)){
                 std::string & y = aliases[tok_str];
                 if(y==tok_str){
                         throw nls::eval_error("Recursive alias:"+tok_str);

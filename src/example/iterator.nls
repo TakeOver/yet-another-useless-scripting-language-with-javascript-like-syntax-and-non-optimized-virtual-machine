@@ -1,0 +1,32 @@
+require exception
+require sys
+const __iter = |self|{
+        is_obj: typeof self == "object",
+        is_arr: typeof self == "array",
+        key:null,
+        value:null,
+        uditer:null,
+        __call: function(){
+                if(@is_obj || @is_arr){
+                        if(@uditer==null){
+                                if(@is_obj)
+                                        @uditer = sys.__obj__iter(self);
+                                else
+                                        @uditer = sys.__arr__iter(self);
+                        }
+                        if(!@uditer.valid()){
+                                return null;
+                        }
+                        var obj = @uditer.next();
+                        @key = obj.key;
+                        @value = obj.value;
+                        if(@key == "prototype")
+                                return this();
+                        return this;
+                }
+                return null;
+        },
+        "__del:uditer": function(){
+                throw new Exception("Cannot apply '__del:uditer' in iterator.");
+        }
+}();

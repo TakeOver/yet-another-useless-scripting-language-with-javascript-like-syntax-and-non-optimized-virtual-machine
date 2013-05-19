@@ -1,4 +1,5 @@
 require std
+require regex
 $hello = function(){
         return "hello"..", ".."world!";
 }

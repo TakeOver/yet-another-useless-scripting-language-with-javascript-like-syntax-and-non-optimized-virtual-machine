@@ -1,0 +1,4 @@
+require std;
+std.debug = false;
+
+define assert = (function(x,y){if(std.debug && !x){print "assertion failed, line:"..__LINE__.." file:"..__FILE__.."\n"..y}})

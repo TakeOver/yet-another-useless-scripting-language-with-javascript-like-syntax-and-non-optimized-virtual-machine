@@ -1,0 +1,20 @@
+require sys;
+
+String.substr = function(start,end){
+        if(start>end || start<0 || start+end>#this || end<0)
+                return null;
+        if(end ==0)
+                return String.Empty;
+        return sys.__native__substr(this,start,end);
+}
+String.charAt = |a| this.substr(a,1);
+
+String.Empty = "";
+
+String.replaceAt = function(where,what){
+        if(where<0 || where>=#this || typeof(where)!="number")
+                throw "Incorrect string operation:replaceAt with:"..where.." and:"..what
+        var first = this.substr(0,where) ||"";
+        var second = this.substr(where+1,#this-where-1) || "";
+        return first..what..second;
+}

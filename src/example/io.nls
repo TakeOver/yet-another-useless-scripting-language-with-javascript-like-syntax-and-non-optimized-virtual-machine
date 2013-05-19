@@ -1,0 +1,43 @@
+require std;
+
+const InputStream = function(path,disp){
+        this.__path = path;
+        this.init = System.__init__safe__istream;
+        this.init();
+        delete this.init;
+        this.__line = -1;
+        this.__auto_dispose = disp || true;
+        this.getLine = || this.__buf[++this.__line];
+        this.get= function(){
+                var res = "";
+                var size =  #this.__buf
+                for(var i=0;i<size;++i){
+                        res=res..' '..this.__buf[i];
+                }
+                if(this.__auto_dispose)
+                        this.finallize()
+                return res;
+        }
+        this.__len = #this.__buf;
+        this.eof = || this.__len <=this.__line+1;
+
+}
+
+const OutStream = System.__native__write__to__file;
+
+std.io = {
+        read: System.__native__read__stdin,
+        write: System.__native__write__stdout
+}
+
+const echo = function(){
+        var size = #arguments;
+        var __write = std.io.write
+        for (var i = 0; i < size; ++i) {
+                __write(arguments[i])
+        }
+}
+
+const alert = function(wat){
+        print wat;
+}

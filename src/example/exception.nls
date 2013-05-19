@@ -1,0 +1,46 @@
+require sys;
+class Exception extends Object {
+        var _what;
+        var line ;
+        var callee;
+        var additionalinfo;
+
+        construct(what,line,callee,additionalinfo){
+                @_what=what;
+                @line = line;
+                @callee = callee;
+                @additionalinfo=additionalinfo;
+        }
+
+        function what(){
+                var str = @_what;
+                if(line!=null)
+                        str=str.."\nat line:"..@line;
+                if(callee!=null)
+                        str=str.."\ncallee:"..@callee;
+                if(additionalinfo!=null)
+                        str=str.."\nadditional:"..@additionalinfo;
+                return str;
+        }
+
+        function __tostr(){
+                return @what();
+        }
+}
+
+class NotImplementedException extends Exception {
+        construct(a,args...){
+                @super("NotImplementedException:"..a,...args);
+        }
+}
+
+class UserException extends Exception{
+        var isUserdata = true;
+        construct(a,args...){
+                @super("UserException:"..a,...args);
+        }
+        function again(){
+                delete @isUserdata;
+                throw this;
+        }
+}

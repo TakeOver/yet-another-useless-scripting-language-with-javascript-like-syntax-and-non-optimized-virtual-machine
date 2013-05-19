@@ -1,0 +1,167 @@
+
+const __typeof = System.__native__typeof;
+
+define $ = Userdata.
+alias and = &&
+alias or = ||
+const _ = null; // since compiler don't report assign to contant as error(simply ignoring assign), this would be nice
+alias not = !
+alias nil = null
+alias sys = System
+
+operator typeof 150(x){
+        return __typeof(x);
+}
+
+const Number = System.Number;
+const String = System.String;
+const Boolean = System.Boolean;
+const Function = System.Function;
+const Null = System.Null;
+const Object = System.Object;
+const Array = System.Array;
+
+
+Object.__call = function(obj){
+        var res = {}
+        for(var i in obj)
+                res[i.key]= i.value;
+        res.prototype = obj.prototype;
+        res.__proto__ = obj.__proto__;
+        res._F = obj._F;
+        return res;
+}
+
+Array.__call = function(obj){
+        var res = {}
+        for(var i in obj)
+                res[i.key]= i.value;
+        return res;
+}
+
+Boolean.__call=|x|
+
+                !!x;
+Number.__call=|x|
+                typeof x == "number"?x:0;
+
+Null.__call=|x|
+                null
+
+String.__call=|x|
+                typeof x == "string"? x:String.Empty;
+
+Object.finallize = function(){
+        for(var i in this){
+                delete @[i.key]
+        }
+}
+
+Array.length = Object.length = String.length = ||
+                                                #this;
+
+Array.finallize = Object.finallize
+
+const Userdata = System.Userdata
+
+const __instanceof = function(x,y){
+        if(x._F == y)
+                return true;
+        while(x.__proto__ != null  && x.__proto__!=y)
+                x = x.prototype;
+        return x.__proto__ == y;
+}
+
+operator instanceof 150 (x,y){
+        return __instanceof(x,y);
+}
+
+alias is = instanceof // C# like.
+
+operator ^ 70 (x,y){
+        return !x || !y;
+}
+
+operator as 150(x,y){
+        if(x instanceof y ==false)
+                return null;
+        var res = new y();
+        for(var i in x.prototype){
+                res[i.key]= x[i.key] || i.value;
+        }
+        res.__proto__ = x.prototype.__proto__;
+        res._F = y;
+        if(x.prototype.super!=null)
+                res.super = x.prototype.super;
+        res.construct = x.prototype.construct;
+        return res;
+}
+
+operator typeid 150(x){
+        if(typeof x == "object")
+                return x._F || Object;
+        if(typeof x == "number")
+                return Number;
+        if typeof x == "string"
+                return String;
+        if typeof x == "boolean"
+                return Boolean;
+        if typeof x == "array"
+                return Array;
+        return null;
+}
+
+operator '=~' 20 (x,y){
+        return typeid x == typeid y
+}
+
+operator '<=>' 70(x,y){
+        if(x>y)
+                return 1;
+        if(x==y)
+                return 0;
+        if(x<y)
+                return -1;
+}
+$RaiseException = function(msg){
+        throw {
+                isUserdata=true,
+                msg = "UserExeption[Raised by Userdata.RaiseException]:"..msg,
+                what = function(){
+                        return @msg;
+                },
+                __tostr = @what
+        };
+}
+Number.toString = || ""..this;
+Array.toString=  || this..'';
+Object.toString = ||this..'';
+Boolean.toString=||this..'';
+Null.toString =||"null";
+Function.toString=||"function";
+String.toString =|| this;
+
+
+operator objectof 150 (x){
+        if(typeof x == "object")
+                return x;
+        return null;
+}
+operator numberof 150 (x){
+        if(typeid x == Number)
+                return x;
+        return null;
+}
+operator booleanof 150 (x){
+        if(typeid x == Boolean)
+                return x;
+        return x || false;
+}
+operator stringof 150 (x){
+        if typeid x == String
+                return x;
+        return x.to_str()
+}
+operator isNull 150 (x){
+        return x == null;
+}

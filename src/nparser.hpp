@@ -499,7 +499,6 @@ namespace nls{
     }
 
     void export_defs(Parser* par){
-
         for(auto&x:par->OpPrecedence)
                 this->OpPrecedence[x.first]=x.second;
         for(auto&x:par->is_user_operator)
@@ -513,26 +512,30 @@ namespace nls{
     //! \brief This function would create new lexer and parser and evaluate file; no double include guard
     //! FIXME \p DOUBLE-INCLUDE-GUARD
     ast_t*ParseRequire(){
-      auto tok = lex->getNextTok();
-      std::string wat;
-      if(tok.tok == str_tok){
-	wat = tok.str;
-      }else if(tok.tok == ident_tok)
-	wat = tok.str +".nls";
-      else return Error("identifer of string-path expected in require expression,found:",tok.str);
-      {
+        auto tok = lex->getNextTok(false);
+        std::string wat;
+        if(tok.tok == str_tok){
+	       wat = tok.str;
+        }else if(tok.tok == ident_tok)
+	       wat = tok.str +".nls";
+        else
+                return Error("identifer of string-path expected in require expression,found:",tok.str);
         if(include_guard[wat]){
+                lex->getNextTokV();
                 return new BlockExpression();
         }else{
                 include_guard[wat]=true;
         }
 	std::ifstream in (wat);
 	if(!in)
-	  return Error("cannon load module in require, found:",tok.str);
+	       return Error("cannon load module in require, found:",tok.str);
+
 	std::string res( (  std::istreambuf_iterator<char>( in ) ),
 			 std::istreambuf_iterator<char>());
 	in.close();
-	auto par = new Parser(new Lexer(res,wat),wat,true);
+
+	Parser* par = new Parser(new Lexer(res,wat),wat,true);
+        par->export_defs(this);
         par->include_guard.insert(include_guard.begin(),include_guard.end());
 	par->Parse();
 	auto root =  par->getRoot();
@@ -541,7 +544,6 @@ namespace nls{
 	delete par;
 	lex->getNextTok();
 	return root;
-      }
     }
 
     ast_t* ParsePrint(){
@@ -1238,6 +1240,9 @@ namespace nls{
         is_user_operator[kwd]=true;
         if(unary)
                 user_unary_oper[kwd]=true;
+    }
+    Lexer* getLex(){
+        return lex;
     }
     void Parse(){
           root = new BlockExpression(true);

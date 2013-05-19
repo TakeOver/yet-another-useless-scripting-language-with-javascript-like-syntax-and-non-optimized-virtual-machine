@@ -1,0 +1,22 @@
+require sys
+require exception;
+
+class Immutable {
+        var _superized = false;
+        construct(){
+                if(!@_superized){
+                        @_superized = true;
+                        return;
+                }
+                delete @_superized;
+                @__assign = function(){
+                        throw new Exception("Access violation, assigning value to property of immutable interface",__LINE__);
+                }
+                @__del = function(){
+                        throw new Exception("Access violation, delete property of immutable interface",__LINE__);
+                }
+                @__set = function(){
+                        throw new Exception("Access violation, setting value to property of immutable interface",__LINE__);
+                }
+        }
+}

@@ -1,0 +1,112 @@
+require sys;
+require exception;
+
+class Ref extends Object{
+        var mutable;
+        construct(ref, mutable){
+                @mutable = mutable || true;
+                @["::__ref"] = ref;
+        }
+        function set(ref){
+                if(@mutable)
+                        @construct(ref,true);
+                else
+                        throw new Exception("Access violation. Immutable ref.",__LINE__,"Ref.set(ref)");
+        }
+        function get(){
+                return @["::__ref"];
+        }
+        function type(){
+                return typeof(@["::__ref"]);
+        }
+        function id(){
+                return typeid @["::__ref"];
+        }
+        function is_obj(){
+                return @["::__ref"] is Object;
+        }
+        function lock(){
+                @mutable = false;
+        }
+        function unlock(){
+                @mutable = true;
+        }
+        function setmut(mut){
+                @mutable = mut;
+        }
+        function unset(){
+                if(@mutable){
+                        delete @["::__ref"];
+                }else
+                        throw new Exception("Access violation. Immutable ref.",__LINE__,"Ref.unset()");
+        }
+        function __print(){
+                print @["::__ref"];
+        }
+        function __str(){
+                return @["::__ref"].to_str();
+        }
+        function is_mutable(){
+                return @mutable;
+        }
+        function __add(x,y){
+                return new Ref(x["::__ref"] + (y["::__ref"] ));
+        }
+        function __sub(x,y){
+                return new Ref(x["::__ref"] - (y["::__ref"] ));
+        }
+        function __mul(x,y){
+                return new Ref(x["::__ref"] * (y["::__ref"] ));
+        }
+        function __div(x,y){
+                return new Ref(x["::__ref"] / (y["::__ref"] ));
+        }
+        function __mod(x,y){
+                return new Ref(x["::__ref"] % (y["::__ref"] ));
+        }
+        function __less(x,y){
+                return new Ref(x["::__ref"] < (y["::__ref"] ));
+        }
+        function __equal(x,y){
+                return new Ref(x["::__ref"] == (y["::__ref"] ));
+        }
+        function __nonequal(x,y){
+                return new Ref(x["::__ref"] != (y["::__ref"] ));
+        }
+        function __great(x,y){
+                return new Ref(x["::__ref"] > (y["::__ref"] ));
+        }
+        function __great_eq(x,y){
+                return new Ref(x["::__ref"] >= (y["::__ref"] ));
+        }
+        function __less_eq(x,y){
+                return new Ref(x["::__ref"] <= (y["::__ref"] ));
+        }
+        function __not(x){
+                return new Ref(!x["::__ref"]);
+        }
+        function __neg(x){
+                return new Ref(-x["::__ref"]);
+        }
+        function __inc(x){
+                if(!@mutable)
+                        throw new Exception("Increment of locked ref.",__LINE__,"Ref.__inc(x)");
+                ++this["::__ref"];
+                return this;
+        }
+        function __dec(x){
+                if(!@mutable)
+                        throw new Exception("Decrement of locked ref.",__LINE__,"Ref.__dec(x)");
+                --this["::__ref"];
+                return this;
+        }
+        function __assign(x){
+                if !@mutable
+                        throw new Exception("assign to locked ref.",__LINE__)
+                if x is Ref {
+                        @set(x);
+                }else{
+                        @["::__ref"] = x;
+                }
+        }
+}

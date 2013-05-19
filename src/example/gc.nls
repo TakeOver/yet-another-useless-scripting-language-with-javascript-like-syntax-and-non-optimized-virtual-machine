@@ -1,0 +1,6 @@
+require sys
+
+const GC={
+    ptr_count: System.__native__reflection_heap_size,
+    Collect: System.__native__reflection_gc_collect
+}

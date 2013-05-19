@@ -241,7 +241,13 @@ namespace nls{
                         for(auto&x:aliases)
                                 par->alias(x.first, x.second);
                         par->Parse();
-                        par->getRoot()->emit(bb);
+                        try{
+                                par->getRoot()->emit(bb);
+                        }catch(eval_error& e){
+                                par->getLex()->dumpAliasesAndDefs();
+                                std::cerr<<"Failed to compile.\n";
+                                throw e;
+                        }
                         if(saverootreg)
                                 rootreg =  par->getRoot()->Registry;
                         delete par;

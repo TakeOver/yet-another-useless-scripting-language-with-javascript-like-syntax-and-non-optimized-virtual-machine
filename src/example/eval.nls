@@ -1,0 +1,4 @@
+require std;
+
+std.eval = |str|
+                sys.__native__unsafe__evaluate("("..str..")");

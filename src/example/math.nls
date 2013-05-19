@@ -1,0 +1,72 @@
+require std;
+
+
+function abstract_cmp(_cond,a,b,c ... ){
+        if( b == null && #c == 0){
+                return a;
+        }
+        if(c.length()==0){
+                if(_cond(a,b))
+                        return a;
+                return b;
+        }
+        if(_cond(a,b))
+                return abstract_cmp(_cond,a,...c);
+        return abstract_cmp(_cond,b,...c);
+}
+
+function max(args...){
+        return abstract_cmp(|x,y|x>y, ...args);
+}
+
+function min(args...){
+        return abstract_cmp(|x,y|x<y,...args);
+}
+
+std.rand = function(from, to){
+        if(typeof(from)=="number" && to==null){
+                to = from
+                from = 0
+        }
+        from = from || 0
+        to = to || 32600
+        raise "Incorrect rand() args, to lesser then from" if(from>to)
+        if(from == to)
+                return from
+        return System.__native__rand()%(to-from) + from
+}
+
+const Math = {
+          PI:3.1415926535,
+          E:2.7182818284,
+
+          sin:System.__native__sin,
+          sqrt:System.__native__sqrt,
+          round:System.__native__round,
+          pow: System.__native__pow,
+          ln: System.__native__log,
+          asin: System.__native__asin,
+          cos:System.__native__cos,
+          tg: System.__native__tg,
+          ctg: System.__native__ctg,
+          acos: System.__native__acos,
+          lb: System.__native__lb,
+          lg: System.__native__lg,
+          lgamma: System.__native__lgamma,
+          factorial: |x|
+                        @round(@lgamma(x)),
+          ceil: System.__native__ceil,
+          atan: System.__native__atan,
+          log: |x,y| @ln(y)/@ln(x),
+          rand: std.rand
+};
+
+const NaN = -Math.sqrt(-1);
+const Infinity = 1/0;// !
+
+operator isNaN 150 (x){
+        return x==NaN;
+}
+operator isInf 150 (x){
+        return x == Infinity
+}
