@@ -13,6 +13,13 @@
 #include <complex>
 namespace nls{
 
+        void write2File(std::string path,Value val){
+                std::fstream out (path);
+                if(!out)
+                        return;
+                val.print(out);
+        }
+
         std::string readLine(){
                 std::string line;
                 std::getline(std::cin,line);
@@ -335,11 +342,14 @@ namespace nls{
                 inline void LoadIOLib(){
                         BindToSystem("__native__write__stdout",writeLine);
                         BindToSystem("__native__read__stdin",readLine);
-                        BindToSystem("__native__substr",substr);\
+                        BindToSystem("__native__substr",substr);
+                        BindToSystem("__native__write__to__file",write2File);
                 }
 
                 inline void LoadLibRegex(){
-                        bindSysClass< Regex >("Regex",Regex::Create, {
+                        bindSysClass< Regex >(
+                                "Regex",
+                                Regex::Create, {
                                 {"apply",def(&Regex::Apply)},
                                 {"indexOf",def(&Regex::IndexOf)},
                                 {"exists",def(&Regex::Exist)}});
@@ -347,30 +357,48 @@ namespace nls{
 
                 inline void LoadLibComplex(){
                         using Complex = std::complex<long double>;
-                        bindSysClass<Complex>("Complex",
-                                (Complex*(*)(long double,long double))[](long double real,long double imm)->Complex*{
-                                        return new Complex(real,imm);
-                                },{{"__get:real",def((long double(*)(Complex*))[](Complex*self)->long double{
-                                        return self->real();
-                                })},{"__set:real",def((void(*)(Complex*, long double))[](Complex*self, long double val){
-                                        return self->real(val);
-                                })},{"__get:imag",def((long double(*)(Complex*))[](Complex*self)->long double{
-                                        return self->imag();
-                                })},{"__set:imag",def((void(*)(Complex*, long double))[](Complex*self, long double val){
-                                        return self->imag(val);
-                                })},{"__tostr", def((std::string(*)(Complex*))[](Complex * self)->std::string{
-                                        return std::string("{\"real\":")+std::to_string(self->real())+ ",\"imag\":"+std::to_string(self->imag())+"}";
-                                })}
+                        bindSysClass<Complex>(
+                                "Complex",
+                                (Complex*(*)(long double,long double))
+                                        [](long double real,long double imm)->Complex*{
+                                                return new Complex(real,imm);
+                                        },
+                                {{"__get:real",def((long double(*)(Complex*))
+                                        [](Complex*self)->long double{
+                                                return self->real();
+                                        })},
+                                {"__set:real",def((void(*)(Complex*, long double))
+                                        [](Complex*self, long double val){
+                                                return self->real(val);
+                                        })},
+                                {"__get:imag",def((long double(*)(Complex*))
+                                        [](Complex*self)->long double{
+                                                return self->imag();
+                                        })},
+                                {"__set:imag",def((void(*)(Complex*, long double))
+                                        [](Complex*self, long double val){
+                                                return self->imag(val);
+                                        })},
+                                {"__tostr", def((std::string(*)(Complex*))
+                                        [](Complex * self)->std::string{
+                                                return std::string("{\"real\":")
+                                                        +std::to_string(self->real())+ ",\"imag\":"
+                                                        +std::to_string(self->imag())+"}";
+                                        })}
                                 } );
                 }
 
                 inline void LoadIterators(){
-                        bindSysClass<HTableIterator>("__obj__iter",HTableIterator::create, {
+                        bindSysClass<HTableIterator>(
+                                "__obj__iter",
+                                HTableIterator::create, {
                                 {"next",def(&HTableIterator::next)},
                                 {"valid",def(&HTableIterator::valid)},
                                 {"__inc",def(&HTableIterator::next)}
                         });
-                        bindSysClass<ArrayIterator>("__arr__iter",ArrayIterator::create ,{
+                        bindSysClass<ArrayIterator>(
+                                "__arr__iter",
+                                ArrayIterator::create ,{
                                 {"next",def(&ArrayIterator::next)},
                                 {"valid",def(&ArrayIterator::valid)},
                                 {"__inc",def(&ArrayIterator::next)}

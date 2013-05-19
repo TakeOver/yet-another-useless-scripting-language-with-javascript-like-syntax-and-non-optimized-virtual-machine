@@ -10,7 +10,6 @@ namespace nls{
                 api->bindFunction("__native__safe__json__parse",__json_parse,false);\
                 api->bindFunction("__native__typeof",__native__typeof,false);\
                 api->bindFunction("__init__safe__istream",__init_safe_file_istream,false);\
-                api->bindFunction("__native__write__to__file",__write__to__file,false);\
                 api->bindFunction("__native__reflection_heap_size",reflection_heap_size,false);\
                 api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect,false);\
                 srand(time(nullptr));\
@@ -132,24 +131,6 @@ namespace nls{
           }
           in.close();
           vm->Push(Value());
-        }
-        void __write__to__file(VirtualMachine *vm,Value*val){
-            auto self = vm->GetArg();
-            if(self.type!=Type::str){
-                  vm->Push(Value());
-                  return;
-            }
-            std::ofstream out (self.s->str);
-            if(!out){
-                    vm->Push(Value());
-                    return;
-            }
-            std::stringstream wat;
-            auto _Wat = vm->GetArg();
-            _Wat.print(wat);
-            out<<wat.str();
-            out.close();
-            vm->Push(Value(true));
         }
         void __reflection_gc_collect(VirtualMachine *vm,Value*){
               vm->CallGCCollection();

@@ -31,7 +31,7 @@ namespace nls{
 	case Type::number: out<<f; break;
 	case Type::boolean: out<<(i?"true":"false"); break;
 	case Type::null: out<<"null"; break;
-        case Type::userdata: out<< "Userdata"; break;
+        case Type::userdata: out<< "\"Userdata\""; break;
       }
     }
     Value():type(Type::null),i(0){}
