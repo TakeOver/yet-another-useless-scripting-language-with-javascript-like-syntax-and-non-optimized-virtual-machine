@@ -1,13 +1,10 @@
 NLogger::[1]:	Unhandled exception
-UserException:function test()
+Incorrect string operation:replaceAt with:null and:null
 Instruction address stack trace:
-callee:2789	in	[test]
-callee:2801	in	[obj.call]
-callee:2813	in	[tre]
-callee:2820	in	[oooobject.1234567kjhnd]
-callee:2821	in	[???]
+callee:2842	in	[VirtualMachine::MakeCall]
+callee:2842	in	[???]
 Instruction:
-[pc:2780]	[op:14]	[subop:0]	r1736	r0	r0
+[pc:53]	[op:14]	[subop:0]	r55	r0	r0
 Value StackTrace:
 [end of value stack trace]
 Excecution aborted

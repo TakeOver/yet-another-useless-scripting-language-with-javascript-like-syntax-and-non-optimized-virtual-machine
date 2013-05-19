@@ -10,7 +10,7 @@
 #include <vector>
 #include <iostream>
 #include "niterator.hpp"
-
+#include <complex>
 namespace nls{
 
         std::string readLine(){
@@ -346,7 +346,22 @@ namespace nls{
                 }
 
                 inline void LoadLibComplex(){
-                        //!TODO
+                        using Complex = std::complex<long double>;
+                        bindSysClass<Complex>("Complex",
+                                (Complex*(*)(long double,long double))[](long double real,long double imm)->Complex*{
+                                        return new Complex(real,imm);
+                                },{{"__get:real",def((long double(*)(Complex*))[](Complex*self)->long double{
+                                        return self->real();
+                                })},{"__set:real",def((void(*)(Complex*, long double))[](Complex*self, long double val){
+                                        return self->real(val);
+                                })},{"__get:imag",def((long double(*)(Complex*))[](Complex*self)->long double{
+                                        return self->imag();
+                                })},{"__set:imag",def((void(*)(Complex*, long double))[](Complex*self, long double val){
+                                        return self->imag(val);
+                                })},{"__tostr", def((std::string(*)(Complex*))[](Complex * self)->std::string{
+                                        return std::string("{\"real\":")+std::to_string(self->real())+ ",\"imag\":"+std::to_string(self->imag())+"}";
+                                })}
+                                } );
                 }
 
                 inline void LoadIterators(){

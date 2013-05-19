@@ -40,22 +40,6 @@ var str = "1234567890"
 print str
 print str.substr(1,9);
 print str.substr(0,1);
-function test(){
-        var obj = $TestClass(1);
-        var _obj = {}
-        _obj.prop = obj.__tostr;
-        print _obj;
-        throw new UserException("function test()",)
-}
-var obj = {
-        call = function(){
-                test();
-        }
-}
-var tre = function(){
-        obj.call();
-}
-var oooobject = {
-        "1234567kjhnd" = |x|tre();
-}
-oooobject["1234567kjhnd"]();
+var c1 = sys.Complex(1,2);
+print sys.Complex;
+print c1;
