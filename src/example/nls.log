@@ -1,11 +1,1 @@
-NLogger::[1]:	Unhandled exception
-Incorrect string operation:replaceAt with:null and:null
-Instruction address stack trace:
-callee:2842	in	[VirtualMachine::MakeCall]
-callee:2842	in	[???]
-Instruction:
-[pc:53]	[op:14]	[subop:0]	r55	r0	r0
-Value StackTrace:
-[end of value stack trace]
-Excecution aborted
-
+NLogger::[1]:	Catcher ApiError in NlsApi::Execute, err.what():'Types mismatch. Failed to cast val.u to Userdata<C>*'

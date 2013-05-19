@@ -1,4 +1,5 @@
 require sys;
+
 class Exception extends Object {
         var _what;
         var line ;

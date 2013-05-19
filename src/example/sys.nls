@@ -12,7 +12,6 @@ alias sys = System
 operator typeof 150(x){
         return __typeof(x);
 }
-
 const Number = System.Number;
 const String = System.String;
 const Boolean = System.Boolean;
@@ -21,6 +20,9 @@ const Null = System.Null;
 const Object = System.Object;
 const Array = System.Array;
 
+Array.toString = Number.toString = Boolean.toString = Object.toString = function(){
+        return this..'';
+}
 
 Object.__call = function(obj){
         var res = {}

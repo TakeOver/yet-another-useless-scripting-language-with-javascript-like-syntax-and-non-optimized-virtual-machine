@@ -11,6 +11,7 @@
 #include <iostream>
 #include "niterator.hpp"
 #include <complex>
+#include "nstream.hpp"
 namespace nls{
 
         void write2File(std::string path,Value val){
@@ -350,6 +351,25 @@ namespace nls{
                         BindToSystem("__native__read__stdin",readLine);
                         BindToSystem("__native__substr",substr);
                         BindToSystem("__native__write__to__file",write2File);
+                        bindSysClass("StringBuilder", StringBuilder::create, {
+                                {"__get",def(&StringBuilder::__get)},
+                                {"append",def(&StringBuilder::Append)},
+                                {"__tostr",def(&StringBuilder::toString)},
+                                {"toString",def(&StringBuilder::toString)},
+                                {"clear",def(&StringBuilder::clear)}
+                        });
+                        bindSysClass("FileStreamWriter", FileStreamWriter::create, {
+                                {"write",def(&FileStreamWriter::Write)},
+                                {"close",def(&FileStreamWriter::Close)},
+                                {"clear",def(&FileStreamWriter::Clear)},
+                                immutableField(FileStreamWriter, path)
+                        });
+                        bindSysClass("FileStreamReader", FileStreamReader::create, {
+                                {"close",def(&FileStreamReader::Close)},
+                                {"read",def(&FileStreamReader::Read)},
+                                {"eof",def(&FileStreamReader::Eof)},
+                                immutableField(FileStreamReader, path)
+                        });
                 }
 
                 inline void LoadLibRegex(){
