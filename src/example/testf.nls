@@ -58,3 +58,7 @@ var int2 =$Integer(3321)
 print int2
 print int+int2;
 print int*int2
+var module = sys.__ModuleLoad("moduletest.nlc")
+print module.variable
+print module
+module.moduleFunction(1,2,3,4,"hi",[],{});

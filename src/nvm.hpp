@@ -45,6 +45,7 @@ namespace nls{
         uint exitcode = 0;
         bool silent = false;
         uint64_t bcsize;
+        std::unordered_map<std::string, uint16_t> meta_variables_info;
 
 #ifdef DEBUG_INFO
         std::vector<std::string> __funcs;
@@ -168,25 +169,24 @@ namespace nls{
 #ifdef EXPERIMENTAL_GC_ROOT
 
         for (int i = 0; i < rootsCount; ++i){
-                assert(gcroots[i]<=registers);
-                R[gcroots[i]].markAll(gc);
+                R[gcroots[i]].markAll(gc,this);
         }
 
 #else
 
         for (int i = 0; i <= registers; ++i){
-                R[i].markAll(gc);
+                R[i].markAll(gc,this);
         }
 
 #endif
 
         for(auto&x:S)
-	       x.markAll(gc);
+	       x.markAll(gc,this);
 	for(auto&x:basic_prototypes){
 	        if(gc->marked(x.second))
 	               continue;
 	        gc->mark(x.second);
-	        x.second->markAll(gc);
+	        x.second->markAll(gc,this);
 	}
 	gc->Collect();
     }
@@ -355,21 +355,16 @@ namespace nls{
                 Unpacked.pop_back();
         }
         if(RD.type == Type::fun_t){
-	        if(RD.func->is_native){
-	               nativeCall(RD.func);
-	               auto tmp = S.back();
-	               S.pop_back();
-	               clearArgs();
-	               S.push_back(tmp);
+               Value self = S.back();
+               S.pop_back();
+               Args.back()--;
+               RD.func->createCall(this, &self);
 #ifdef DEBUG_INFO
+               if(RD.type ==Type::fun_t && RD.func->is_native && __funcs.size()){
                         __funcs.pop_back();
+               }
 #endif
-	               return;
-	       }
-	       uint off = RD.func->getCall();
-	       Addr.push_back(pc);
-	       pc = off;
-	       return;
+               return;
         }
         if(RD.type == Type::htable){
 	        auto prop = RD.t->get("__call");
@@ -381,34 +376,25 @@ namespace nls{
 #endif
 	               return;
 	        }
-	        S.pop_back();
-	        S.push_back(RD);//pushing new this
-                if(prop.func->is_native){
-                        this->nativeCall(prop.func);
-                        auto tmp = S.back();
-                        S.pop_back();
-                        clearArgs();
-                        S.push_back(tmp);
-                        return;
-                }
-	        uint offs = prop.func->getCall();
-	        Addr.push_back(pc);
-	        pc = offs;
-	        return;
+	       S.pop_back();
+               Args.back()--;
+               prop.func->createCall(this, &RD);
+#ifdef DEBUG_INFO
+               if(prop.type ==Type::fun_t && prop.func->is_native && __funcs.size()){
+                        __funcs.pop_back();
+               }
+#endif
+               return;
         }else if(RD.type==Type::userdata){
                 auto __call = RD.u->get("__call",this);
                 if(__call.type==Type::fun_t){
-                        if(__call.func->is_native){
-                                nativeCall(__call.func);
-                                auto tmp = S.back();
-                                S.pop_back();
-                                clearArgs();
-                                S.push_back(tmp);
-                                return;
-                        }
-                        uint offs = __call.func->getCall();
-                        Addr.push_back(pc);
-                        pc = offs;
+                        S.pop_back();
+                        --Args.back();
+                        __call.func->createCall(this, & RD);
+#ifdef DEBUG_INFO
+                        if(__call.type== Type::fun_t && __call.func->is_native && __funcs.size())
+                                __funcs.pop_back();
+#endif
                         return;
                 }
         }
@@ -420,7 +406,7 @@ namespace nls{
     }
 
     inline void createFunc(){
-        RD=Value(gc,new Function(bc[pc].src1));
+        RD=Value(gc,new Function(this,bc[pc].src1));
     }
 
     std::map<uint8_t, std::string> overload_operators = {
@@ -717,8 +703,30 @@ namespace nls{
 #else
                 _pt += sizeof(uint16_t)*rootssize;
 #endif
+                auto metasize = *(uint32_t*)_pt;
+                _pt+=sizeof(uint32_t);
+                std::vector<uint16_t> meta;
+                for(uint i = 0;i<metasize;++i)
+                {
+                        uint16_t reg = ((uint16_t*)_pt)[i];
+                        meta.push_back(reg);
+                }
+                _pt+=sizeof(uint16_t)*metasize;
                 InitRuntime();
                 loadAssemblyConst(_pt);
+                for(uint i=0;i<(metasize);i+=2)
+                {
+                        auto reg = meta[i];
+                        auto strreg = meta[i+1];
+                        if(R[strreg].type!=Type::str)
+                        {
+                                NLogger::log("Incorrect type of register["+std::to_string(strreg)+"], expected string type");
+                                continue;
+                        }
+                        std::string key (R[strreg].s->str);
+
+                        meta_variables_info[key] = reg;
+                }
                 pcode * _code = ( pcode * ) _pt;
                 bc = _code;
                 Addr.push_back(bcsize-2);
@@ -729,7 +737,9 @@ namespace nls{
                 _is_inited = true;
                 R = new Value[registers+1]();
                 Args.push_back(0);
-                gc = new GC();
+                if(!is_module){
+                        gc = new GC();
+                }
                 R[1]=Value(gc,new Table<Value>());
                 basic_prototypes={
         	       {Type::null,new Table<Value>()},
@@ -757,7 +767,7 @@ namespace nls{
         }
 
         bool _is_inited =false;
-
+        bool is_module = false;
         void loadAssemblyConst(char*&ptr){
                 constpcode * x;
                 while(true){
@@ -766,7 +776,7 @@ namespace nls{
 	                        return;
 	                switch(x->subop){
 	                       case 3:  {
-                                                R[x->dest]=Value(gc,new String((const char*)&((x+1)->op)));
+                                                R[x->dest]=Value(gc,new String((const char*)(ptr+sizeof(constpcode))));
                                                 ptr+=strlen(((char*)(x+1)))+1;
                                         }break;
 
@@ -797,6 +807,11 @@ namespace nls{
                 Addr.push_back(bcsize=(code.size()-2));
         }
 public:
+        VirtualMachine ( GC*gc){
+                // creating fork; module;
+                this->gc = gc;
+                registers = 0;
+        }
         inline Value call(Function*func,Value self,std::vector<Value> args = std::vector<Value>()){
                 auto __pc = pc;
                 auto res = MakeCall(func, self,args);
@@ -861,12 +876,12 @@ public:
 
         inline void setSysFunction(std::string name, native_func_t addr){
                 assert(R[1].type == Type::htable);
-                R[1].t->set(name,Value(gc,new Function(addr)));
+                R[1].t->set(name,Value(gc,new Function(this,addr)));
         }
 
         inline void setSysFunction(std::string name,AbstractNativeFunction* addr){
                 assert(R[1].type == Type::htable);
-                R[1].t->set(name,Value(gc,new Function(addr)));
+                R[1].t->set(name,Value(gc,new Function(this,addr)));
         }
         inline void SetToSystem(std::string name,Value val){
                 R[1].t->set(name,val);
@@ -884,7 +899,9 @@ public:
                 }else{
                         delete []bc;
                 }
-                delete gc;
+                if(!is_module){
+                        delete gc;
+                }
         }
         bool isInitialized(){
                 return _is_inited;
@@ -899,9 +916,12 @@ public:
                 rootsCount = bb->getRootsSize();
                 gcroots = bb->makeRootArray();
 #endif
+                bcsize = bb->getCode().size();
                 InitRuntime();
                 loadConst(bb->getCPool());
                 SetAssembly(bb->getCode());
+                meta_variables_info.insert(bb->getMetaVarInfo().begin(),bb->getMetaVarInfo().end());
+                Addr.push_back(bcsize-2);
         }
         void LoadAssembly(const char*path){
                 VirtualAlloc(path);
@@ -909,6 +929,28 @@ public:
         void Release(){
 	       delete this;
         }
+
+        Value GetVariable(std::string key){
+                auto iter = meta_variables_info.find(key);
+                if(iter == meta_variables_info.end())
+                        return Value();
+                return R[iter->second];
+        }
+
+        void SetVariable(std::string key,Value val){
+                auto iter = meta_variables_info.find(key);
+                if(iter == meta_variables_info.end())
+                        return;
+                R[iter->second] = val;
+        }
+
+        Value ForceCall(Function* func, VirtualMachine * owner, Value * self){
+                std::vector<Value> args;
+                while(owner->Args.back())
+                        args.push_back(owner->GetArg());
+                return call(func,self,args);
+        }
+
         Table<Value>* getUserData(){
                 return R[1].t->get("Userdata").t;
         }
@@ -999,8 +1041,21 @@ public:
         	       ++pc;
                 }
         }
+        void SetCall(Function*func,Value*self){
+                S.push_back(*self);
+                Args.back()++;
+                Addr.push_back(pc);
+                pc = func->getCall();
+        }
 #undef RD
 #undef RS1
 #undef RS2
   };
+        void __VMForceCall(VirtualMachine* funcowner,Function* func,VirtualMachine* owner,Value* self){
+                owner->Push(funcowner->ForceCall(func, owner, self));
+        }
+        void __VMCall(Function* func,VirtualMachine* owner,Value* self){
+                owner->SetCall(func,self);
+        }
+
 }

@@ -55,6 +55,8 @@ class DisAssembly{
     }
     _pt+=sizeof(uint16_t);
 
+                auto metasize = *(uint32_t*)_pt;
+                _pt+=sizeof(uint32_t) + sizeof(uint16_t)*metasize;
     loadAssemblyConst(_pt);
     pcode* _code = (pcode*) _pt;
     for(uint i=0;i<size;++i)
@@ -93,8 +95,8 @@ class DisAssembly{
   {arrAlloc,"arralloc"},{ret,"ret"},{mov,"mov"},{call,"call"},  {createFunc,"func"},
   {math_op,"math"},{setProperty,"set"},{getProperty,"get"},{jcc,"jmp"},
   {label,"label"},{getArg,"getarg"}, {pushArg,"pusharg"},{clearArgs,"clear"},{concat,"concat"},
-  {IL::print,"print"},{set_try,"set_try"},{pop_try,"unset_try"} ,{throw_ex,"throw"}, {length,"length"},\
-  {del,"delete"},{IL::createArgsArray,"argmunets"}};
+  {IL::print,"print"},{set_try,"set_try"},{pop_try,"unset_try"} ,{throw_ex,"throw"}, {length,"length"},
+  {del,"delete"},{IL::createArgsArray,"argmunets"},{IL::unpackArg,"unpack"},{IL::packArg,"pack"}};
 
   std::map<long,std::string> mathasm = {{(int)add,"+"},{(int)mul,"*"},{(int)sub,"-"},
   {(int)Math::div,"/"},{(int)mod,"%"},{(int)log_or,"||"},{(int)log_and,"&&"},{(int)log_not,"!"},{(int)log_gt,">"},{(int)log_ge,">="},{(int)log_lt,"<"},

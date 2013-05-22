@@ -1,0 +1,6 @@
+print "Module called.!1";
+
+var variable  = 42;
+function moduleFunction(){
+        print "function called with:"..arguments;
+}

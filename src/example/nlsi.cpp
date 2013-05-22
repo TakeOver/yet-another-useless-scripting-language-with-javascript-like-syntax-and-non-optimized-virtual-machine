@@ -21,7 +21,6 @@ int main(int argc,char**argv){
 
   api->Require((argv[1]));
 
-  BINDALL;
   api->Execute();
   api->Release();
 }

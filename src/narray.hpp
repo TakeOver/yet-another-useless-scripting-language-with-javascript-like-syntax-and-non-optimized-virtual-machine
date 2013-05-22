@@ -6,6 +6,7 @@
 #include "ngc.hpp"
 #include <ostream>
 namespace nls{
+        class VirtualMachine;
         template<typename T> class Array: public GCObject{
         public:
                 std::map<uint64_t,T> arr;
@@ -36,9 +37,9 @@ namespace nls{
                         arr[off]=what;
                 }
 
-                void markAll(GC*gc){
+                void markAll(GC*gc,VirtualMachine*vm){
                         for(auto&x:arr)
-        	               x.second.markAll(gc);
+        	               x.second.markAll(gc,vm);
                 }
 
                 void print(std::ostream& out){

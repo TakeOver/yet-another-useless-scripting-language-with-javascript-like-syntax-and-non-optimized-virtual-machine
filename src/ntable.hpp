@@ -7,6 +7,7 @@
 #include "ntypes.hpp"
 #include <string>
 namespace nls{
+        class VirtualMachine;
   template<typename T> class Table: public GCObject{
   public:
     std::unordered_map<std::string,T> table;
@@ -52,9 +53,9 @@ namespace nls{
       }
       return iter->second;
     }
-    void markAll(GC*gc){
+    void markAll(GC*gc,VirtualMachine *vm){
       for(auto&x:table)
-	x.second.markAll(gc);
+	x.second.markAll(gc,vm);
     }
     bool set(std::string off,T what, bool first = true){
         #if RECURSIVE_SET

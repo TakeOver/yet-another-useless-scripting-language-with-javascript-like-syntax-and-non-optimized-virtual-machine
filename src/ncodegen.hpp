@@ -166,6 +166,7 @@ namespace nls{
       std::map<uint,uint> LabelsOffsets;
       std::map<uint16_t,bool> constant_var;
       RefHolder* rh;
+      std::vector<std::pair<std::string,uint16_t> > meta_variables_info;
       std::set<uint16_t> roots;
   public:
         inline uint16_t getRootsSize(){
@@ -176,6 +177,18 @@ namespace nls{
                 for(auto&x:roots)
                         res.push_back(x);
                 return res;
+        }
+        // ptr to seriallized info. + sizeof info.
+        std::vector<uint16_t> SeriallizeMetaInfo(){
+                std::vector<uint16_t> res;
+                for(auto&x:meta_variables_info){
+                        res.push_back(x.second);
+                        res.push_back(ConstReg(x.first,3));
+                }
+                return res;
+        }
+        decltype(meta_variables_info)& getMetaVarInfo(){
+                return meta_variables_info;
         }
     BasicBlock* get_global(){
       return global_scope;
@@ -291,6 +304,10 @@ namespace nls{
     uint16_t newVarReg(std::string name){
       auto reg = (locals[name] = newReg());
       roots.insert(reg);
+      if(!global_scope){
+        ConstReg(name,3);
+        meta_variables_info.push_back(std::make_pair(name, reg));
+      }
       return reg;
     }
     bool is_const_reg(uint16_t reg){

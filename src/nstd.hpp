@@ -4,17 +4,16 @@
 #pragma once
 namespace nls{
 
-#define BINDALL(api) \
+#define BINDALL(api,bindFunction,...)\
         do{ \
-                api->bindFunction("__native__unsafe__evaluate",__eval,false);\
-                api->bindFunction("__native__safe__json__parse",__json_parse,false);\
-                api->bindFunction("__native__typeof",__native__typeof,false);\
-                api->bindFunction("__init__safe__istream",__init_safe_file_istream,false);\
-                api->bindFunction("__native__reflection_heap_size",reflection_heap_size,false);\
-                api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect,false);\
+                api->bindFunction("__native__unsafe__evaluate",__eval,##__VA_ARGS__);\
+                api->bindFunction("__native__safe__json__parse",__json_parse,##__VA_ARGS__);\
+                api->bindFunction("__native__typeof",__native__typeof,##__VA_ARGS__);\
+                api->bindFunction("__init__safe__istream",__init_safe_file_istream,##__VA_ARGS__);\
+                api->bindFunction("__native__reflection_heap_size",reflection_heap_size,##__VA_ARGS__);\
+                api->bindFunction("__native__reflection_gc_collect",__reflection_gc_collect,##__VA_ARGS__);\
                 srand(time(nullptr));\
         }while(0)
-
         void reflection_heap_size(VirtualMachine*vm,Value*self){
               vm->Push(Value(static_cast<long double>(vm->getGC()->PtrCount())));
         }

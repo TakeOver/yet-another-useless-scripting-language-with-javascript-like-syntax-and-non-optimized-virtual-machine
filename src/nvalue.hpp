@@ -61,23 +61,23 @@ namespace nls{
                         return Value(*this);
                 }
 
-                void markAll(GC*gc){
+                void markAll(GC*gc,VirtualMachine*vm){
                     	if(type==Type::str){
                       		gc->mark(s);
                     	}else if(type==Type::htable){
                     		if(gc->marked(t)==false){
                 			gc->mark(t);
-                			t->markAll(gc);
+                			t->markAll(gc,vm);
                 	        }
                     	}else if(type==Type::array){
                         	if(gc->marked(t)==false){
                 			gc->mark(a);
-                			a->markAll(gc);
+                			a->markAll(gc,vm);
                 	        }
                        }else if(type==Type::fun_t){
                     	   gc->mark(func);
                        }else if(type==Type::userdata){
-                                u->MarkAll(gc);
+                                u->MarkAll(gc,vm);
                        }
                 }
 

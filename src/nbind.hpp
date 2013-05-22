@@ -239,16 +239,26 @@ namespace nls{
                         clazz = ptr;
                 }
                 Userdata<C>(C*clazz,const decltype(methods) methods):clazz(clazz), methods(methods){}
-                virtual void MarkAll(GC*gc){
+                virtual void MarkAll(GC*gc, VirtualMachine * vm){
                         for(auto&x:methods)
-                                x.second.markAll (gc);
+                                x.second.markAll (gc,vm);
+                        auto __gc = methods.find("__gc");
+                        if(__gc!=methods.end() && __gc->second.type==Type::fun_t){
+                                Value self = Value(vm->getGC(),this);
+                                vm->call(__gc->second.func,&self,{Value(gc,new Userdata<GC>(gc))});
+                        }
                 }
                 virtual Value get(std::string what, VirtualMachine*vm){
                         auto iter = methods.find(what);
                         if(iter==methods.end()){
                                 iter = methods.find("__get:"+what);
                                 if(iter==methods.end() || iter->second.type!=Type::fun_t){
-                                        return Value();
+                                        iter = methods.find("__get");
+                                        if(iter==methods.end() || iter->second.type!=Type::fun_t){
+                                                return Value();
+                                        }
+                                        Value self = Value(vm->getGC(),this);
+                                        return vm->call(iter->second.func,self,{Value(vm->getGC(),new String(what))});
                                 }
                                 Value self = Value(vm->getGC(),this);
                                 return vm->call(iter->second.func,self);
@@ -294,6 +304,13 @@ namespace nls{
                         return clazz;
                 }
         };
+        template<> GC* UserType<GC*>(Value  val){
+                if(val.type!=Type::userdata || ! dynamic_cast<Userdata<GC>*>(val.u)){
+                        throw nls::ApiError("Value.type!=Type::userdata. GC*.");
+                }
+                return dynamic_cast<Userdata<GC>*>(val.u)->getData();
+
+        }
         template<class C> C* ThisCast(Value val){
                 if(val.type!=Type::userdata)
                         throw nls::ApiError("Cannot cast Value to this. val.type!=Type::userdata");

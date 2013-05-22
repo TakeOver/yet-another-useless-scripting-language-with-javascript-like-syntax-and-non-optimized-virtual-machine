@@ -13,9 +13,9 @@
 #include <complex>
 #include "nstream.hpp"
 #include "ninteger.hpp"
+#include "nmodule.hpp"
 
 namespace nls{
-
         void write2File(std::string path,Value val){
                 std::fstream out (path);
                 if(!out)
@@ -86,7 +86,7 @@ namespace nls{
                         NativeFunction<T1, T2...> *_F = def(ptr);
                         native_binds.push_back(_F); //locking ptr;
                         if(to_ud){
-                                setToUD(name, Value(vm->getGC(),new Function(_F)));
+                                setToUD(name, Value(vm->getGC(),new Function(vm,_F)));
                         }else{
                                 vm->setSysFunction(name, _F);
                         }
@@ -103,7 +103,7 @@ namespace nls{
                 template <class C,typename ...CArgs> void bindClass(std::string clazz,C*(* allocator)(CArgs...), std::unordered_map<std::string,AbstractNativeFunction*> _mem, bool to_ud = true){
                         std::unordered_map<std::string, Value> mem;
                         for(auto&x:_mem){
-                                mem[x.first] = Value(vm->getGC(),new Function(x.second));
+                                mem[x.first] = Value(vm->getGC(),new Function(vm,x.second));
                                 native_binds.push_back(x.second);
                         }
                         auto constr = [clazz,mem,this, allocator](VirtualMachine*vm,Value*){
@@ -117,6 +117,24 @@ namespace nls{
                                 vm->Push(self);
                         };
                         bindFunction(clazz,constr,to_ud);
+                }
+                template <class C,typename ...CArgs> void bindSpecialClass(std::string clazz,C*(* allocator)(GC*,CArgs...), std::unordered_map<std::string,AbstractNativeFunction*> _mem){
+                        std::unordered_map<std::string, Value> mem;
+                        for(auto&x:_mem){
+                                mem[x.first] = Value(vm->getGC(),new Function(vm,x.second));
+                                native_binds.push_back(x.second);
+                        }
+                        auto constr = [clazz,mem,this, allocator](VirtualMachine*vm,Value*){
+                                Value self;
+                                try{
+                                        self.type = Type::userdata;
+                                        self.u = new Userdata<C>(allocator(vm->getGC(), UserType<CArgs> (vm->GetArg())...),mem);
+                                }catch(std::string msg){
+                                        this->RaiseException(msg);
+                                }
+                                vm->Push(self);
+                        };
+                        bindFunction(clazz,constr,false);
                 }
 
                 void RaiseException(std::string msg){
@@ -270,7 +288,7 @@ namespace nls{
 
                 inline void bindFunction(std::string name, VirtualMachine::native_func_t _f, bool to_ud = true){
                         if(to_ud){
-                                getUserData()->set(name,Value(vm->getGC(),new Function(_f)));
+                                getUserData()->set(name,Value(vm->getGC(),new Function(vm,_f)));
                         }else{
                                 vm->setSysFunction(name,_f);
                         }
@@ -307,10 +325,10 @@ namespace nls{
 
                 inline void SaveAssembly(std::string out){
                         int filedesc = open(out.c_str(),O_WRONLY | O_CREAT | O_TRUNC,
-        		                      	  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                                                  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
                         if (filedesc < 0) {
-        	               throw ApiError("Cannot open file: SaveAssembly");
+                               throw ApiError("Cannot open file: SaveAssembly");
                         }
                         uint16_t _tmp;
                         uint64_t size = bb->getCode().size();
@@ -319,12 +337,19 @@ namespace nls{
                         std::vector<uint16_t> roots (bb->makeRootArray());
                         write(filedesc,&(_tmp=roots.size()),sizeof(uint16_t));
                         write(filedesc,roots.data(),roots.size()*sizeof(uint16_t));
+
+                        std::vector<uint16_t> meta = bb->SeriallizeMetaInfo();
+
+                        uint32_t tsize = meta.size();
+                        write(filedesc,&tsize,sizeof(uint32_t));
+                        write(filedesc,meta.data(),tsize*sizeof(uint16_t));
+
                         saveCPool(filedesc);
                         saveCode(filedesc);
                         close(filedesc);
                 }
 
-                        inline void LoadLibMath(){
+                inline void LoadLibMath(){
                         BindToSystem("rand", std::rand);
                         BindToSystem("acos", acosl);
                         BindToSystem("__native__cos", cosl);
@@ -455,11 +480,16 @@ namespace nls{
                         LoadIterators();
                         LoadIOLib();
                         LoadLibInteger();
+                        bindSpecialClass("__ModuleLoad", Module::create, {
+                                {"__get",def(&Module::__get)},
+                                {"__set",def(&Module::__set)},
+                                {"__gc",def(&Module::Collect)}
+                        });
                 }
 
                 inline void InitVM(){
                         vm->SetBasicBlock(bb);
-                        BINDALL(this);
+                        BINDALL(this, bindFunction,false);
                         LoadAllLibs();
                 }
 
@@ -471,9 +501,8 @@ namespace nls{
                 }
 
                 inline void InitVM(const char*path){
-                        assert(vm!=nullptr);
                         vm->LoadAssembly(path);
-                        BINDALL(this);
+                        BINDALL(this, bindFunction,false);
                         LoadAllLibs();
                 }
 
@@ -510,5 +539,30 @@ namespace nls{
                         delete this;
                 }
 
+        };
+        class Compiler{
+                NlsApi api;
+        public:
+                Compiler(){}
+                static Compiler* create(){
+                        return new Compiler();
+                }
+                void Compile(std::string path){
+                        api.CompileFile(path);
+                }
+                void Run(){
+                        api.PreprocessBitCode();
+                        api.InitVM();
+                        api.Execute();
+                }
+                void Require(std::string path){
+                        api.Require(path.c_str());
+                }
+                Value Eval(GC*gc, std::string what){
+                        return NlsApi::Eval(what, gc);
+                }
+                void CompileText(std::string what){
+                        api.CompileText(what);
+                }
         };
 }

@@ -1,1 +1,5 @@
-NLogger::[1]:	Catcher ApiError in NlsApi::Execute, err.what():'Types mismatch. Failed to cast val.u to Userdata<C>*'
+NLogger::[1]:	Incorrect type of register[2], expected string type
+NLogger::[1]:	Incorrect type of register[6], expected string type
+NLogger::[1]:	Incorrect type of register[8], expected string type
+NLogger::[1]:	Catched vm_error in NlsApi::Execute, err.what():'Oooooops!
+'
