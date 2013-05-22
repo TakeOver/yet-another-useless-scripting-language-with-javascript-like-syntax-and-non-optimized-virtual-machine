@@ -1,5 +1,0 @@
-NLogger::[1]:	Incorrect type of register[2], expected string type
-NLogger::[1]:	Incorrect type of register[6], expected string type
-NLogger::[1]:	Incorrect type of register[8], expected string type
-NLogger::[1]:	Catched vm_error in NlsApi::Execute, err.what():'Oooooops!
-'
