@@ -1,0 +1,4 @@
+require sys
+const Module = {
+        load = sys.__ModuleLoad;
+}

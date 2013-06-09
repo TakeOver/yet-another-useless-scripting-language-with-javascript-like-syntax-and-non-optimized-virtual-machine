@@ -30,9 +30,11 @@ namespace nls{
   public:
         typedef std::function<void(VirtualMachine*,Value*)> native_func_t;
   private:
+
 #define RD R[bc[pc].dest]
 #define RS1 R[bc[pc].src1]
 #define RS2 R[bc[pc].src2]
+
         Value * R = nullptr; //! @p registers
         uint registers;
         std::vector<Value> S; //! @p Stack-for-spilling-and-func-args
@@ -59,601 +61,607 @@ namespace nls{
         std::map<uint8_t,Table<Value>*> basic_prototypes;
 
         GC* gc = nullptr;
+        bool _is_inited =false;
+        bool is_module = false;
+
+        inline void StopTheWorld(){
+
+#ifdef EXPERIMENTAL_GC_ROOT
+
+                for (int i = 0; i < rootsCount; ++i){
+                        R[gcroots[i]].markAll(gc,this);
+                }
+
+#else
+
+                for (int i = 0; i <= registers; ++i){
+                        R[i].markAll(gc,this);
+                }
+
+#endif
+
+                for(auto&x:S)
+                       x.markAll(gc,this);
+                for(auto&x:basic_prototypes){
+                        if(gc->marked(x.second))
+                               continue;
+                        gc->mark(x.second);
+                        x.second->markAll(gc,this);
+                }
+                if(!is_module){
+                        gc->Collect();
+                }
+        }
 
         inline Table<Value>* _getPrototypeOf(uint8_t _t){
                 return basic_prototypes[_t];
         }
 
-    inline void tostr(Value&val, std::stringstream& ss){
-        if(val.type == Type::htable){
-	       auto _f = val.t->get("__tostr");
-	       if(_f.type == Type::fun_t){
-                        call(_f.func, val).print(ss);
-                        return;
-	        }
-        }else if(val.type==Type::userdata){
-                auto _fc = val.u->get("__tostr",this);
-                if(_fc.type==Type::fun_t){
-                        call(_fc.func,val).print(ss);
+        inline void tostr(Value&val, std::stringstream& ss){
+                if(val.type == Type::htable){
+        	       auto _f = val.t->get("__tostr");
+        	       if(_f.type == Type::fun_t){
+                                call(_f.func, val).print(ss);
+                                return;
+        	        }
+                }else if(val.type==Type::userdata){
+                        auto _fc = val.u->get("__tostr",this);
+                        if(_fc.type==Type::fun_t){
+                                call(_fc.func,val).print(ss);
+                                return;
+                        }
+                }
+                val.print(ss);
+        }
+
+        inline void createArgsArray(){
+                auto count = Args.back();
+                auto reg = bc[pc].dest;
+                auto off = S.size()-1;
+                R[reg]= Value(gc,new Array<Value>());
+                for (int i = 0; i < count; ++i){
+                        R[reg].a->set(i, S[off-i]);
+                }
+
+        }
+
+        inline void packArg(){
+                Array<Value>* arr = new Array<Value>();
+                uint idx = 0;
+                while(Args.back()--){
+                        arr->set(idx++,S.back());
+                        S.pop_back();
+                }
+                RD = Value(gc,arr);
+        }
+
+        inline void unpackArg(){
+                if(RD.type != Type::array){
+                        S.push_back(RD);
+                        Unpacked.push_back(1);
                         return;
                 }
-        }
-        val.print(ss);
-    }
-
-    inline void createArgsArray(){
-        auto count = Args.back();
-        auto reg = bc[pc].dest;
-        auto off = S.size()-1;
-        R[reg]= Value(gc,new Array<Value>());
-        for (int i = 0; i < count; ++i){
-                R[reg].a->set(i, S[off-i]);
+                auto idx = RD.a->arr.size();
+                while(idx--){
+                        S.push_back(RD.a->get(idx));
+                }
+                Unpacked.push_back(RD.a->arr.size());
         }
 
-    }
+        inline void delProp(){
+                if(RD.type!=Type::htable && RD.type!=Type::array && RD.type!=Type::userdata)
+        	       return;
+                std::stringstream s;
+                if(RD.type==Type::userdata){
+                        tostr(RS1,s);
+                        RD.u->del(s.str(), this);
+                        return;
+                }
+                if(RD.type==Type::htable){
+        	       tostr(RS1,s);
 
-    inline void packArg(){
-        Array<Value>* arr = new Array<Value>();
-        uint idx = 0;
-        while(Args.back()--){
-                arr->set(idx++,S.back());
+                        auto __del = RD.t->get("__del:"+s.str());
+
+                        if(__del.type==Type::fun_t){
+                                call(__del.func,RD);
+                                return;
+                        }
+
+                        __del = RD.t->get("__del");
+
+                        if(__del.type==Type::fun_t){
+                                call(__del.func,RD,{Value(gc,new String(s.str()))});
+                                return;
+                        }
+
+                	auto iter = RD.t->table.find(s.str());
+                	if(iter == RD.t->table.end())
+                	       return;
+
+                	RD.t->table.erase(iter);
+
+                }else{
+                	if(RS1.type!=Type::number){
+                	        tostr(RS1,s);
+                        	auto iter = _getPrototypeOf(Type::array)->table.find(s.str());
+                        	if(iter == _getPrototypeOf(Type::array)->table.end())
+                	                return;
+                	        _getPrototypeOf(Type::array)->table.erase(iter);
+                	}else{
+                	        auto iter = RD.a->arr.find((uint64_t)RS1.f);
+                	        if(RD.a->arr.end()==iter)
+                	               return;
+                	        RD.a->arr.erase(iter);
+                	}
+                }
+
+        }
+
+        inline void mov(){
+                if(RD.type==Type::htable){
+                        auto prop = RD.t->get("__assign");
+                        if(prop.type==Type::fun_t){
+                                call(prop.func, RD,{RS1});
+                                return;
+                        }
+                }else if(RD.type==Type::userdata){
+                        auto prop = RD.u->get("__assign",this);
+                        if(prop.type==Type::fun_t){
+                                call(prop.func, RD,{RS1});
+                                return;
+                        }
+                }
+                RD=RS1;
+                if(RS1.type==Type::str)
+        	       RD.s=RD.s->Clone();
+        }
+
+        inline void objAlloc(){
+                assert(bc[pc].dest<=registers);
+                RD=Value(gc,new Table<Value>());
+                RD.t->set("prototype",Value(gc,_getPrototypeOf(Type::htable)));
+        }
+
+        inline void arrAlloc(){
+                RD=Value(gc,new Array<Value>());
+        }
+
+        inline void hlt(){
+                exitcode = 1; //
+        }
+
+        inline void getArg(){
+                if(Args.empty() || Args.back()==0){
+        	       RD=Value(0,Type::null);
+                } else {
+        	       pop();
+        	       Args.back()-=1;
+                }
+        }
+
+        inline void length(){
+                if(RS1.type== Type::htable){
+                        auto _fc = RS1.t->get("__len");
+                        if(_fc.type==Type::fun_t){
+                                RD = call(_fc.func,RS1);
+                                return;
+                        }
+        	        RD=Value(RS1.t->table.size()+.0);
+                }else if (RS1.type==Type::str){
+        	        RD=Value(RS1.s->len+.0);
+                }else if(RS1.type==Type::array){
+        	        if(RS1.a->arr.size()==0){
+        	               RD=Value(0.0);
+                        }else{
+        	               RD=Value(RS1.a->arr.rbegin()->first+1.0);
+                       }
+                }else if(RS1.type==Type::userdata){
+                        auto _fc = RS1.u->get("__len",this);
+                        if(_fc.type==Type::fun_t){
+                                RD = call(_fc.func,RS1);
+                                return;
+                        }
+                }else{
+                        RD=Value(1.0);
+                }
+        }
+
+        inline void clearArgs(){
+                if(Args.empty())
+                        return;
+                if(S.size()!=0){
+                        for(uint i=0;i<Args.back() && S.size();++i){
+        	               S.pop_back();
+                        }
+                }
+                Args.pop_back();
+        }
+
+        inline void dup(){
+                S.push_back(S.back());
+        }
+
+        inline void pushNewObj(){
+                S.push_back(Value(gc,new Table<Value>()));
+        }
+
+        inline void push(){
+                assert(bc[pc].dest<=registers);
+                S.push_back(RD);
+        }
+
+        inline void pop(){
+                assert(bc[pc].dest<=registers);
+                assert(!S.empty());
+                RD=S.back();
                 S.pop_back();
         }
-        RD = Value(gc,arr);
-    }
 
-    inline void unpackArg(){
-        if(RD.type != Type::array){
+        inline void top(){
+                assert(bc[pc].dest<=registers);
+                assert(!S.empty());
+                RD=S.back();
+            }
+
+
+        inline void print(){
+                std::stringstream ss;
+                tostr(RD,ss);
+                std::cout<<ss.str()<<std::endl;
+        }
+
+        inline void ret(){
                 S.push_back(RD);
-                Unpacked.push_back(1);
-                return;
-        }
-        auto idx = RD.a->arr.size();
-        while(idx--){
-                S.push_back(RD.a->get(idx));
-        }
-        Unpacked.push_back(RD.a->arr.size());
-    }
-
-    inline void delProp(){
-        if(RD.type!=Type::htable && RD.type!=Type::array && RD.type!=Type::userdata)
-	       return;
-        std::stringstream s;
-        if(RD.type==Type::userdata){
-                tostr(RS1,s);
-                RD.u->del(s.str(), this);
-                return;
-        }
-        if(RD.type==Type::htable){
-	       tostr(RS1,s);
-
-                auto __del = RD.t->get("__del:"+s.str());
-
-                if(__del.type==Type::fun_t){
-                        call(__del.func,RD);
-                        return;
-                }
-
-                __del = RD.t->get("__del");
-
-                if(__del.type==Type::fun_t){
-                        call(__del.func,RD,{Value(gc,new String(s.str()))});
-                        return;
-                }
-
-        	auto iter = RD.t->table.find(s.str());
-        	if(iter == RD.t->table.end())
-        	       return;
-
-        	RD.t->table.erase(iter);
-
-        }else{
-        	if(RS1.type!=Type::number){
-        	        tostr(RS1,s);
-                	auto iter = _getPrototypeOf(Type::array)->table.find(s.str());
-                	if(iter == _getPrototypeOf(Type::array)->table.end())
-        	                return;
-        	        _getPrototypeOf(Type::array)->table.erase(iter);
-        	}else{
-        	        auto iter = RD.a->arr.find((uint64_t)RS1.f);
-        	        if(RD.a->arr.end()==iter)
-        	               return;
-        	        RD.a->arr.erase(iter);
-        	}
-        }
-
-    }
-
-    inline void StopTheWorld(){
-
-#ifdef EXPERIMENTAL_GC_ROOT
-
-        for (int i = 0; i < rootsCount; ++i){
-                R[gcroots[i]].markAll(gc,this);
-        }
-
-#else
-
-        for (int i = 0; i <= registers; ++i){
-                R[i].markAll(gc,this);
-        }
-
-#endif
-
-        for(auto&x:S)
-	       x.markAll(gc,this);
-	for(auto&x:basic_prototypes){
-	        if(gc->marked(x.second))
-	               continue;
-	        gc->mark(x.second);
-	        x.second->markAll(gc,this);
-	}
-	gc->Collect();
-    }
-
-    inline void mov(){
-        if(RD.type==Type::htable){
-                auto prop = RD.t->get("__assign");
-                if(prop.type==Type::fun_t){
-                        call(prop.func, RD,{RS1});
-                        return;
-                }
-        }else if(RD.type==Type::userdata){
-                auto prop = RD.u->get("__assign",this);
-                if(prop.type==Type::fun_t){
-                        call(prop.func, RD,{RS1});
-                        return;
-                }
-        }
-        RD=RS1;
-        if(RS1.type==Type::str)
-	       RD.s=RD.s->Clone();
-    }
-
-    inline void objAlloc(){
-        assert(bc[pc].dest<=registers);
-        RD=Value(gc,new Table<Value>());
-        RD.t->set("prototype",Value(gc,_getPrototypeOf(Type::htable)));
-    }
-
-    inline void arrAlloc(){
-        RD=Value(gc,new Array<Value>());
-    }
-
-    inline void hlt(){
-        exitcode = 1; //
-    }
-
-    inline void getArg(){
-        if(Args.empty() || Args.back()==0){
-	       RD=Value(0,Type::null);
-        } else {
-	       pop();
-	       Args.back()-=1;
-        }
-    }
-
-    inline void length(){
-        if(RS1.type== Type::htable){
-                auto _fc = RS1.t->get("__len");
-                if(_fc.type==Type::fun_t){
-                        RD = call(_fc.func,RS1);
-                        return;
-                }
-	        RD=Value(RS1.t->table.size()+.0);
-        }else if (RS1.type==Type::str){
-	        RD=Value(RS1.s->len+.0);
-        }else if(RS1.type==Type::array){
-	        if(RS1.a->arr.size()==0){
-	               RD=Value(0.0);
+                if(Addr.size()){
+                        pc = Addr.back();
+                        Addr.pop_back();
                 }else{
-	               RD=Value(RS1.a->arr.rbegin()->first+1.0);
-               }
-        }else if(RS1.type==Type::userdata){
-                auto _fc = RS1.u->get("__len",this);
-                if(_fc.type==Type::fun_t){
-                        RD = call(_fc.func,RS1);
+                        NLogger::log("VirtualMachine::ret():\t Addr.size()==0");
+                        pc = bcsize-2;
+                }
+                RS2.type = Type::null;
+
+#ifdef DEBUG_INFO
+
+                while(!__funcs.empty()&&__funcs.size()>=Addr.size())
+                __funcs.pop_back();
+
+#endif
+
+        }
+
+        inline void nativeCall(Function*func){
+                auto self = S.back();
+                S.pop_back();
+                --Args.back();
+                if(func->is_abstract){
+                        func->createCall(this, &self);
                         return;
                 }
-        }else{
-                RD=Value(1.0);
+                native_func_t callee = (native_func_t)func->getNativeCall();
+                callee(this,&self);
         }
-    }
 
-    inline void clearArgs(){
-        if(Args.empty())
-                return;
-        if(S.size()!=0){
-                for(uint i=0;i<Args.back() && S.size();++i){
-	               S.pop_back();
+        inline void call(){
+
+#ifdef DEBUG_INFO
+                if(RS2.type==Type::str)
+                        __funcs.push_back(RS2.s->str);
+                else
+                        __funcs.push_back("???");
+#endif
+
+                Args.push_back(bc[pc].src1);
+                while(!Unpacked.empty()){
+                        if(!Unpacked.back()){
+                                --Args.back();
+                        }else{
+                                Args.back()+=(Unpacked.back()-1);
+                        }
+                        Unpacked.pop_back();
                 }
-        }
-        Args.pop_back();
-    }
-
-    inline void dup(){
-        S.push_back(S.back());
-    }
-
-    inline void pushNewObj(){
-        S.push_back(Value(gc,new Table<Value>()));
-    }
-
-    inline void push(){
-        assert(bc[pc].dest<=registers);
-        S.push_back(RD);
-    }
-
-    inline void pop(){
-        assert(bc[pc].dest<=registers);
-        assert(!S.empty());
-        RD=S.back();
-        S.pop_back();
-    }
-
-    inline void top(){
-        assert(bc[pc].dest<=registers);
-        assert(!S.empty());
-        RD=S.back();
-    }
-
-
-    inline void print(){
-        std::stringstream ss;
-        tostr(RD,ss);
-        std::cout<<ss.str()<<std::endl;
-    }
-
-    inline void ret(){
-        S.push_back(RD);
-        if(Addr.size()){
-                pc = Addr.back();
-                Addr.pop_back();
-        }else{
-                NLogger::log("VirtualMachine::ret():\t Addr.size()==0");
-                pc = bcsize-2;
-        }
-        RS2.type = Type::null;
-
+                if(RD.type == Type::fun_t){
+                       Value self = S.back();
+                       S.pop_back();
+                       Args.back()--;
+                       RD.func->createCall(this, &self);
 #ifdef DEBUG_INFO
-
-        while(!__funcs.empty()&&__funcs.size()>=Addr.size())
-        __funcs.pop_back();
-
-#endif
-
-    }
-
-    inline void nativeCall(Function*func){
-        auto self = S.back();
-        S.pop_back();
-        --Args.back();
-        if(func->is_abstract){
-                func->createCall(this, &self);
-                return;
-        }
-        native_func_t callee = (native_func_t)func->getNativeCall();
-        callee(this,&self);
-    }
-
-    inline void call(){
-
-#ifdef DEBUG_INFO
-        if(RS2.type==Type::str)
-                __funcs.push_back(RS2.s->str);
-        else
-                __funcs.push_back("???");
-#endif
-
-        Args.push_back(bc[pc].src1);
-        while(!Unpacked.empty()){
-                if(!Unpacked.back()){
-                        --Args.back();
-                }else{
-                        Args.back()+=(Unpacked.back()-1);
-                }
-                Unpacked.pop_back();
-        }
-        if(RD.type == Type::fun_t){
-               Value self = S.back();
-               S.pop_back();
-               Args.back()--;
-               RD.func->createCall(this, &self);
-#ifdef DEBUG_INFO
-               if(RD.type ==Type::fun_t && RD.func->is_native && __funcs.size()){
-                        __funcs.pop_back();
-               }
-#endif
-               return;
-        }
-        if(RD.type == Type::htable){
-	        auto prop = RD.t->get("__call");
-	        if(prop.type!=Type::fun_t){
-	               clearArgs();
-	               S.push_back(Value());
-#ifdef DEBUG_INFO
-                       __funcs.pop_back();
-#endif
-	               return;
-	        }
-	       S.pop_back();
-               Args.back()--;
-               prop.func->createCall(this, &RD);
-#ifdef DEBUG_INFO
-               if(prop.type ==Type::fun_t && prop.func->is_native && __funcs.size()){
-                        __funcs.pop_back();
-               }
-#endif
-               return;
-        }else if(RD.type==Type::userdata){
-                auto __call = RD.u->get("__call",this);
-                if(__call.type==Type::fun_t){
-                        S.pop_back();
-                        --Args.back();
-                        __call.func->createCall(this, & RD);
-#ifdef DEBUG_INFO
-                        if(__call.type== Type::fun_t && __call.func->is_native && __funcs.size())
+                       if(RD.type ==Type::fun_t && RD.func->is_native && __funcs.size()){
                                 __funcs.pop_back();
+                       }
 #endif
-                        return;
+                       return;
                 }
-        }
-        clearArgs();
-        S.push_back(Value());
+                if(RD.type == Type::htable){
+        	        auto prop = RD.t->get("__call");
+        	        if(prop.type!=Type::fun_t){
+        	               clearArgs();
+        	               S.push_back(Value());
 #ifdef DEBUG_INFO
-        __funcs.pop_back();
+                               __funcs.pop_back();
 #endif
-    }
-
-    inline void createFunc(){
-        RD=Value(gc,new Function(this,bc[pc].src1));
-    }
-
-    std::map<uint8_t, std::string> overload_operators = {
-        {IL::Math::add,"__add"},
-        {IL::Math::mul,"__mul"},
-        {IL::Math::sub,"__sub"},
-        {IL::Math::div,"__div"},
-        {IL::Math::mod,"__mod"},
-        {IL::Math::log_or,"__or"},
-        {IL::Math::log_and,"__and"},
-        {IL::Math::log_not,"__not"},
-        {IL::Math::neg,"__neg"},
-        {IL::Math::inc,"__inc"},
-        {IL::Math::dec,"__dec"},
-        {IL::Math::log_le,"__less_eq"},
-        {IL::Math::log_eq,"__equal"},
-        {IL::Math::log_ne,"__nonequal"},
-        {IL::Math::log_ge,"__great_eq"},
-        {IL::Math::log_gt,"__great"},
-        {IL::Math::log_lt,"__less"}
-    };
-    constexpr inline static bool is_unary_op(uint8_t q ){
-        using namespace IL::Math;
-        return q==inc || q==dec || q==neg || q==log_not;
-    }
-    inline void math_op(){
-        using namespace IL::Math;
-        if(RS1.type==Type::htable){
-                auto op  = overload_operators[bc[pc].subop];
-                auto object_operator = RS1.t->get(op);
-                if(object_operator.type==Type::fun_t){
-                        if(!is_unary_op(bc[pc].subop))
-                                RD = call(object_operator.func, RS1, {RS1,RS2});
-                        else
-                                RD = call(object_operator.func,RS1,{RS1});
-                        return;
-                }
-        }else if(RS1.type==Type::userdata){
-                auto op  = overload_operators[bc[pc].subop];
-                        auto object_operator = RS1.u->get(op,this);
-                if(object_operator.type==Type::fun_t){
-                        if(!is_unary_op(bc[pc].subop))
-                                RD = call(object_operator.func, RS1, {RS2});
-                        else
-                                RD = call(object_operator.func,RS1);
-                        return;
-                }
-        }
-        switch (bc[pc].subop){
-        	case add: RD = RS1+RS2; break;
-        	case sub: RD = RS1-(RS2); break;
-        	case mul: RD = RS1*RS2; break;
-        	case div: RD = RS1/RS2; break;
-        	case mod: RD = RS1%RS2; break;
-        	case log_and: RD = RS1&&RS2; break;
-        	case log_or: RD = RS1||RS2; break;
-        	case log_eq: RD = RS1==RS2; break;
-        	case log_ne: RD = RS1!=RS2; break;
-        	case log_lt: RD = RS1<RS2; break;
-        	case log_le: RD = RS1<=RS2; break;
-        	case log_gt: RD = RS1>RS2; break;
-        	case log_ge: RD = RS1>=RS2; break;
-        	case log_not: RD = !(RS1); break;
-        	case neg: RD = -(RS1); break;
-        	case inc: RD = Value(1.0)+RD; break;
-        	case dec: RD = Value(-1.0)+RD; break;
-        }
-    }
-
-    inline void concat(){
-        std::stringstream ss;
-        tostr(RS1,ss);
-        tostr(RS2,ss);
-        RD=Value(gc,new String(ss.str().c_str()));
-    }
-
-    inline void setProperty(){
-        if(RD.type == Type::array && RS1.type==Type::number){
-	       RD.a->set(((uint64_t)RS1.f),RS2);
-	       return;
-        }
-        std::stringstream ss;
-        tostr(RS1,ss);
-        if(RD.type!=Type::htable){
-                if(RD.type==Type::userdata){
-                        RD.u->set(ss.str(),RS2,this);
-                        return;
-                }
-	        auto prot = _getPrototypeOf(RD.type);
-	        if(!prot)
-	                return;
-	       prot->set(ss.str(),RS2);
-        }else{
-                if(RD.t->exist(ss.str())==false){
-                        auto setter = RD.t->get("__set:"+ss.str());
-                        if(setter.type==Type::fun_t){
-                                call(setter.func, RD,{RS2});
-                                return;
-                        }
-                        setter = RD.t->get("__set");
-                        if(setter.type==Type::fun_t){
-                                call(setter.func,RD,{Value(gc,new String(ss.str())),RS2});
-                                return;
-                        }
-                }
-	        RD.t->set(ss.str(),RS2);
-        }
-    }
-
-    inline void getProperty(){
-        if(RS1.type == Type::array && RS2.type==Type::number){
-	        RD= RS1.a->get((uint64_t)RS2.f);
-	        return;
-        }
-        std::stringstream ss;
-        tostr(RS2,ss);
-        if(RS1.type!=Type::htable){
-                if(RS1.type==Type::userdata){
-                        RD = RS1.u->get(ss.str(),this);
-                        return;
-                }
-	        auto prot = _getPrototypeOf(RS1.type);
-	        if(!prot)
-	                RD.type=Type::null;
-	        RD=prot->get(ss.str());
-        }else{
-                if(RS1.t->exist(ss.str())==false){
-                        auto getter = RS1.t->get("__get:"+ss.str());
-                        if(getter.type!=Type::fun_t){
-                                getter = RS1.t->get("__get");
-                                if(getter.type!=Type::fun_t){
-                                        RD = Value();
-                                        return;
-                                }
-                                RD = call(getter.func, RS1,{Value(gc,new String(ss.str()))});
-                                return;
-                        }
-                        RD = call(getter.func, RS1);
-                        return;
-                }
-	       RD=RS1.t->get(ss.str());
-        }
-    }
-
-    inline void jcc(){
-        if(bc[pc].subop==IL::Jump::jmp){
-	        pc = bc[pc].offset;
-	        return;
-        }
-        bool res = RD.type==Type::null
-                        ||(RD.type==Type::boolean && RD.i==0)
-                        || (RD.type==Type::number && RD.f==0.0);
-        if(bc[pc].subop!=IL::Jump::jz)
-                res=!res;
-        pc=res?bc[pc].offset:pc;
-    }
-
-    inline void set_try(){
-        tryAddr.push_back(bc[pc].offset);
-    }
-
-    Value StackTrace(){
-
+        	               return;
+        	        }
+        	       S.pop_back();
+                       Args.back()--;
+                       prop.func->createCall(this, &RD);
 #ifdef DEBUG_INFO
-
-        Array<Value>* st = new Array<Value>();
-        for(uint i=0;i<__funcs.size();++i){
-                st->set(i,Value(gc,new String(__funcs[i])));
-        }
-        return Value(gc,st);
-
-#else
-
-        return Value();
-
+                       if(prop.type ==Type::fun_t && prop.func->is_native && __funcs.size()){
+                                __funcs.pop_back();
+                       }
 #endif
-
-    }
-
-    inline void throw_ex(){
-        auto &nexception=RD;
-        if(tryAddr.empty()){
-                if(silent){
-                        exitcode = 2;
-                        return;
+                       return;
+                }else if(RD.type==Type::userdata){
+                        auto __call = RD.u->get("__call",this);
+                        if(__call.type==Type::fun_t){
+                                S.pop_back();
+                                --Args.back();
+                                __call.func->createCall(this, & RD);
+#ifdef DEBUG_INFO
+                                if(__call.type== Type::fun_t && __call.func->is_native && __funcs.size())
+                                        __funcs.pop_back();
+#endif
+                                return;
+                        }
                 }
-                auto handle =getUserData()->get("OnException");
-                if(handle.type==Type::fun_t && nexception.type==Type::htable && bool(nexception.t->get("isUserdata"))){
-                        auto ud = Value(gc,getUserData());
-                        if(call(handle.func,ud,{nexception,StackTrace()})){
+                clearArgs();
+                S.push_back(Value());
+#ifdef DEBUG_INFO
+                __funcs.pop_back();
+#endif
+        }
+
+        inline void createFunc(){
+                RD=Value(gc,new Function(this,bc[pc].src1));
+        }
+
+        std::map<uint8_t, std::string> overload_operators = {
+                {IL::Math::add,"__add"},
+                {IL::Math::mul,"__mul"},
+                {IL::Math::sub,"__sub"},
+                {IL::Math::div,"__div"},
+                {IL::Math::mod,"__mod"},
+                {IL::Math::log_or,"__or"},
+                {IL::Math::log_and,"__and"},
+                {IL::Math::log_not,"__not"},
+                {IL::Math::neg,"__neg"},
+                {IL::Math::inc,"__inc"},
+                {IL::Math::dec,"__dec"},
+                {IL::Math::log_le,"__less_eq"},
+                {IL::Math::log_eq,"__equal"},
+                {IL::Math::log_ne,"__nonequal"},
+                {IL::Math::log_ge,"__great_eq"},
+                {IL::Math::log_gt,"__great"},
+                {IL::Math::log_lt,"__less"}
+        };
+
+        constexpr inline static bool is_unary_op(uint8_t q ){
+                using namespace IL::Math;
+                return q==inc || q==dec || q==neg || q==log_not;
+        }
+
+        inline void math_op(){
+                using namespace IL::Math;
+                if(RS1.type==Type::htable){
+                        auto op  = overload_operators[bc[pc].subop];
+                        auto object_operator = RS1.t->get(op);
+                        if(object_operator.type==Type::fun_t){
+                                if(!is_unary_op(bc[pc].subop))
+                                        RD = call(object_operator.func, RS1, {RS1,RS2});
+                                else
+                                        RD = call(object_operator.func,RS1,{RS1});
                                 return;
                         }
-                        exitcode = 2;
-                        return;
-                }else if((handle=R[1].t->get("OnException")).type==Type::fun_t){
-                        if(call(handle.func,R[1],{nexception, StackTrace()})){
+                }else if(RS1.type==Type::userdata){
+                        auto op  = overload_operators[bc[pc].subop];
+                                auto object_operator = RS1.u->get(op,this);
+                        if(object_operator.type==Type::fun_t){
+                                if(!is_unary_op(bc[pc].subop))
+                                        RD = call(object_operator.func, RS1, {RS2});
+                                else
+                                        RD = call(object_operator.func,RS1);
                                 return;
                         }
-                        exitcode = 2;
-                        return;
-                }else{
-	                std::cerr<<"Unhandled exception:\n";
-                        std::stringstream ss;
-                        tostr(nexception,ss);
-                        std::cerr<<ss.str();
-                        std::cerr<<"\n";
+                }
+                switch (bc[pc].subop){
+                	case add: RD = RS1+RS2; break;
+                	case sub: RD = RS1-(RS2); break;
+                	case mul: RD = RS1*RS2; break;
+                	case div: RD = RS1/RS2; break;
+                	case mod: RD = RS1%RS2; break;
+                	case log_and: RD = RS1&&RS2; break;
+                	case log_or: RD = RS1||RS2; break;
+                	case log_eq: RD = RS1==RS2; break;
+                	case log_ne: RD = RS1!=RS2; break;
+                	case log_lt: RD = RS1<RS2; break;
+                	case log_le: RD = RS1<=RS2; break;
+                	case log_gt: RD = RS1>RS2; break;
+                	case log_ge: RD = RS1>=RS2; break;
+                	case log_not: RD = !(RS1); break;
+                	case neg: RD = -(RS1); break;
+                	case inc: RD = Value(1.0)+RD; break;
+                	case dec: RD = Value(-1.0)+RD; break;
+                }
+        }
+
+        inline void concat(){
+                std::stringstream ss;
+                tostr(RS1,ss);
+                tostr(RS2,ss);
+                RD=Value(gc,new String(ss.str().c_str()));
+        }
+
+        inline void setProperty(){
+                if(RD.type == Type::array && RS1.type==Type::number){
+        	       RD.a->set(((uint64_t)RS1.f),RS2);
+        	       return;
                 }
                 std::stringstream ss;
-                ss<<("Unhandled exception\n");
-                tostr(nexception,ss);
-                exitcode = 2;
-	        if(Addr.empty()==false)
-	               ss<<"\nInstruction address stack trace:\n";
-        	for(auto x = Addr.rbegin(),e=Addr.rend();x!=e;++x){
-	               ss<<"callee:"<<*x;
-#ifdef DEBUG_INFO
-                        if(__funcs.empty()){
-#endif
-                                ss<<"\tin\t[???]\n";
-#ifdef DEBUG_INFO
-                        }else{
-                                ss<<"\tin\t["<<__funcs.back()<<"]\n";
-	                        __funcs.pop_back();
+                tostr(RS1,ss);
+                if(RD.type!=Type::htable){
+                        if(RD.type==Type::userdata){
+                                RD.u->set(ss.str(),RS2,this);
+                                return;
                         }
-#endif
+        	        auto prot = _getPrototypeOf(RD.type);
+        	        if(!prot)
+        	                return;
+        	       prot->set(ss.str(),RS2);
+                }else{
+                        if(RD.t->exist(ss.str())==false){
+                                auto setter = RD.t->get("__set:"+ss.str());
+                                if(setter.type==Type::fun_t){
+                                        call(setter.func, RD,{RS2});
+                                        return;
+                                }
+                                setter = RD.t->get("__set");
+                                if(setter.type==Type::fun_t){
+                                        call(setter.func,RD,{Value(gc,new String(ss.str())),RS2});
+                                        return;
+                                }
+                        }
+        	        RD.t->set(ss.str(),RS2);
                 }
-	       ss<<"Instruction:\n[pc:"<<pc<<"]\t[op:"
-        	<<bc[pc].op<<"]\t[subop:"<<(uint)bc[pc].subop<<"]\tr"<<bc[pc].dest
-	       <<"\tr"<<bc[pc].src1<<"\tr"<<bc[pc].src2<<'\n';
-                ss<<"Value StackTrace:\n";
-                for(int i = S.size()-1;i>=0;--i){
-                        ss<<"["<<i<<"]=";
-                        S[i].print(ss);
-                        ss<<'\n';
-                }
-                ss<<"[end of value stack trace]\n";
-        	ss<<"Excecution aborted\n";
-                NLogger::log(ss.str());
-                Addr.clear();
-                Addr.push_back(bcsize-2);
-                S.clear();
-	       return;
         }
-        pc = tryAddr.back();
-        tryAddr.pop_back();
-        S.push_back(nexception);
-    }
+
+        inline void getProperty(){
+                if(RS1.type == Type::array && RS2.type==Type::number){
+        	        RD= RS1.a->get((uint64_t)RS2.f);
+        	        return;
+                }
+                std::stringstream ss;
+                tostr(RS2,ss);
+                if(RS1.type!=Type::htable){
+                        if(RS1.type==Type::userdata){
+                                RD = RS1.u->get(ss.str(),this);
+                                return;
+                        }
+        	        auto prot = _getPrototypeOf(RS1.type);
+        	        if(!prot)
+        	                RD.type=Type::null;
+        	        RD=prot->get(ss.str());
+                }else{
+                        if(RS1.t->exist(ss.str())==false){
+                                auto getter = RS1.t->get("__get:"+ss.str());
+                                if(getter.type!=Type::fun_t){
+                                        getter = RS1.t->get("__get");
+                                        if(getter.type!=Type::fun_t){
+                                                RD = Value();
+                                                return;
+                                        }
+                                        RD = call(getter.func, RS1,{Value(gc,new String(ss.str()))});
+                                        return;
+                                }
+                                RD = call(getter.func, RS1);
+                                return;
+                        }
+        	       RD=RS1.t->get(ss.str());
+                }
+        }
+
+        inline void jcc(){
+                if(bc[pc].subop==IL::Jump::jmp){
+        	        pc = bc[pc].offset;
+        	        return;
+                }
+                bool res = RD.type==Type::null
+                                ||(RD.type==Type::boolean && RD.i==0)
+                                || (RD.type==Type::number && RD.f==0.0);
+                if(bc[pc].subop!=IL::Jump::jz)
+                        res=!res;
+                pc=res?bc[pc].offset:pc;
+        }
+
+        inline void set_try(){
+                tryAddr.push_back(bc[pc].offset);
+        }
+
+        Value StackTrace(){
+
+#ifdef DEBUG_INFO
+
+                Array<Value>* st = new Array<Value>();
+                for(uint i=0;i<__funcs.size();++i){
+                        st->set(i,Value(gc,new String(__funcs[i])));
+                }
+                return Value(gc,st);
+
+#else
+
+                return Value();
+
+#endif
+
+        }
+
+        inline void throw_ex(){
+                auto &nexception=RD;
+                if(tryAddr.empty()){
+                        if(silent){
+                                exitcode = 2;
+                                return;
+                        }
+                        auto handle =getUserData()->get("OnException");
+                        if(handle.type==Type::fun_t && nexception.type==Type::htable && bool(nexception.t->get("isUserdata"))){
+                                auto ud = Value(gc,getUserData());
+                                if(call(handle.func,ud,{nexception,StackTrace()})){
+                                        return;
+                                }
+                                exitcode = 2;
+                                return;
+                        }else if((handle=R[1].t->get("OnException")).type==Type::fun_t){
+                                if(call(handle.func,R[1],{nexception, StackTrace()})){
+                                        return;
+                                }
+                                exitcode = 2;
+                                return;
+                        }else{
+        	                std::cerr<<"Unhandled exception:\n";
+                                std::stringstream ss;
+                                tostr(nexception,ss);
+                                std::cerr<<ss.str();
+                                std::cerr<<"\n";
+                        }
+                        std::stringstream ss;
+                        ss<<("Unhandled exception\n");
+                        tostr(nexception,ss);
+                        exitcode = 2;
+        	        if(Addr.empty()==false)
+        	               ss<<"\nInstruction address stack trace:\n";
+                	for(auto x = Addr.rbegin(),e=Addr.rend();x!=e;++x){
+        	               ss<<"callee:"<<*x;
+#ifdef DEBUG_INFO
+                                if(__funcs.empty()){
+#endif
+                                        ss<<"\tin\t[???]\n";
+#ifdef DEBUG_INFO
+                                }else{
+                                        ss<<"\tin\t["<<__funcs.back()<<"]\n";
+        	                        __funcs.pop_back();
+                                }
+#endif
+                        }
+        	       ss<<"Instruction:\n[pc:"<<pc<<"]\t[op:"
+                	<<bc[pc].op<<"]\t[subop:"<<(uint)bc[pc].subop<<"]\tr"<<bc[pc].dest
+        	       <<"\tr"<<bc[pc].src1<<"\tr"<<bc[pc].src2<<'\n';
+                        ss<<"Value StackTrace:\n";
+                        for(int i = S.size()-1;i>=0;--i){
+                                ss<<"["<<i<<"]=";
+                                S[i].print(ss);
+                                ss<<'\n';
+                        }
+                        ss<<"[end of value stack trace]\n";
+                	ss<<"Excecution aborted\n";
+                        NLogger::log(ss.str());
+                        Addr.clear();
+                        Addr.push_back(bcsize-2);
+                        S.clear();
+        	       return;
+                }
+                pc = tryAddr.back();
+                tryAddr.pop_back();
+                S.push_back(nexception);
+        }
 
         inline void pop_try(){
                 assert(tryAddr.empty()==false);
@@ -766,8 +774,6 @@ namespace nls{
 #endif
         }
 
-        bool _is_inited =false;
-        bool is_module = false;
         void loadAssemblyConst(char*&ptr){
                 constpcode * x;
                 while(true){

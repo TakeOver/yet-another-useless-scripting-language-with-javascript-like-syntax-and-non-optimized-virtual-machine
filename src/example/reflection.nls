@@ -1,0 +1,10 @@
+require sys;
+require gc;
+const Reflection = {
+        loadModule = sys.__ModuleLoad;
+        Compiler = sys.__Compiler; // not implemented, yet.
+        lang = {},
+        VM = sys.__VM,
+        Core = {},
+        GC = GC
+}
