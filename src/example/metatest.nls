@@ -23,10 +23,10 @@ class F extends T{
         function __equal(x,y){
                 return x.x==y.x && x.y==y.y;
         }
-        function __get:y(){
+        function __get:y(){ //f.y вызовет f.__get:y(this)
                 return @_y;
         }
-        function __set:y(val){
+        function __set:y(val){ // f.y = expr вызовет f.__set:y(this,expr)
                 @_y = val;
         }
         function Seriallize(){
@@ -49,12 +49,12 @@ print w;
 print q+w
 print q==w;
 print q==c;
-print q is F
+print q is F //проверки базовых классов
 print q is T
 print min(...[10,2,3,4,5,6,7]);
-print [1,4,89,3,5,9,4].bubble_sort(|x,y|x>y).uniq().binary_search(4);
+print [1,4,89,3,5,9,4].bubble_sort(|x,y|x>y);//передача короткой лямбды
 var s =new F();
-s.Deseriallize("{'x':10,'y':9}");
+s.Deseriallize("{'x':10,'y':9}");//Строка в Object. 
 print s;
 print s.Seriallize();
 class W extends Immutable{
@@ -63,7 +63,7 @@ class W extends Immutable{
         construct(x,y){
                 @_x=x;
                 @_y=y;
-                @super();
+                @super();//вызов конструктора базового класса
         }
         function __get(what){
                 if(what=="x")
@@ -75,27 +75,27 @@ class W extends Immutable{
 }print NaN
 print NaN == NaN
 print Infinity
-function meta(x,xs...){
+function meta(x,xs...){//запакованные аргументы
         print x
         if(xs.length()>0)
-                meta(...xs);
+                meta(...xs);//распаковка аргументов
 }
-meta(1,2,3,...[4,5,6],7,...[8,9,0])
-print [1,2,3,4,5,[5,6,8,9,0,[1,2,3,4,5,[1,2,3,4,5,6]]]].flat().uniq()
-$OnException = function(ex,st){
+meta(1,2,3,...[4,5,6],7,...[8,9,0]) //динамическая распаковка аргументов
+$OnException = function(ex,st){ //перехват _пользовательских исключений_
+        print "StackTrace:"
         print st;
         print ex;
         return true;
 }
 function a (){
-        throw {isUserdata:true}
+        throw {isUserdata:true} // указание, что исключение пользовательское
 }
 function b(){
         a()
 }
 function c(){
 b()
-}
+}//тест на печать стека вызовов
 var name = c;
 var asd = {
         callee = function(){

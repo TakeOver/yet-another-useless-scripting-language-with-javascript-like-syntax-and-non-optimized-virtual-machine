@@ -1,4 +1,5 @@
 require std
+require io
 extern club1,club2
 club1 = club1 || "Chelsea"
 club2 = club2 || "Manchester"

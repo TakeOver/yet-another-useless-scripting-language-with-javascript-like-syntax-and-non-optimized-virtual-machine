@@ -18,3 +18,4 @@ String.replaceAt = function(where,what){
         var second = this.substr(where+1,#this-where-1) || "";
         return first..what..second;
 }
+String.echo = function(){print @}

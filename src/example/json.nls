@@ -1,5 +1,4 @@
-require sys
-
+require io
 const JSON ={
   parse :|str| System.__native__safe__json__parse(str);
 
@@ -19,3 +18,4 @@ const JSON ={
 
 String.to_obj = |a| JSON.parse(this);
 String.valid_json =|a|JSON.valid(this);
+const JsonLoad = |str| JSON.parse(new InputStream(str).get())
